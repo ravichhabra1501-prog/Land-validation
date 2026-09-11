@@ -1,0 +1,6 @@
+{
+  "name": "Intelligent Land Record Digitization and Validation System",
+  "description": "AI-powered land record digitization, multilingual Indic OCR/HWR extraction, NLP field classification, automated validation rules, and human-in-the-loop verification portal.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

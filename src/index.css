@@ -1,0 +1,266 @@
+@import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
+
+@theme {
+  --font-serif: Georgia, Cambria, "Times New Roman", Times, serif;
+  --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+
+  --color-natural-bg: #f5f5f0;
+  --color-natural-surface: #FAF8F5;
+  --color-natural-card: #EBE7DF;
+  --color-natural-warm: #FFF9EA;
+  --color-natural-olive: #5A5A40;
+  --color-natural-olive-dark: #43432F;
+  --color-natural-olive-light: #707052;
+  --color-natural-border: #DCD7CE;
+  --color-natural-border-dark: #C4BDAF;
+  --color-natural-brown: #8B4513;
+  --color-natural-earth: #4A3728;
+  --color-natural-rust: #8B0000;
+  --color-natural-forest: #3D5A40;
+  --color-natural-text: #33332A;
+  --color-natural-muted: #6B6B58;
+}
+
+:root {
+  --bg-canvas: #f5f5f0;
+  --bg-surface: #FAF8F5;
+  --bg-card: #EBE7DF;
+  --bg-warm: #FFF9EA;
+  --color-olive: #5A5A40;
+  --color-olive-dark: #43432F;
+  --color-brown: #8B4513;
+  --color-earth: #4A3728;
+  --color-rust: #8B0000;
+  --color-forest: #3D5A40;
+  --border-natural: #DCD7CE;
+}
+
+body {
+  background-color: #f5f5f0;
+  color: #33332A;
+  font-family: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+}
+
+/* Custom Natural Tones utilities */
+.natural-serif {
+  font-family: Georgia, Cambria, "Times New Roman", Times, serif;
+}
+
+.bg-natural-olive {
+  background-color: #5A5A40;
+}
+
+.hover\:bg-natural-olive-dark:hover {
+  background-color: #43432F;
+}
+
+.text-natural-olive {
+  color: #5A5A40;
+}
+
+.border-natural-olive {
+  border-color: #5A5A40;
+}
+
+/* Modern Animations & Micro-interactions */
+@keyframes ocrLaserScan {
+  0% {
+    top: 0%;
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    top: 98%;
+    opacity: 0.8;
+  }
+}
+
+.animate-laser-scan {
+  animation: ocrLaserScan 2.4s ease-in-out infinite alternate;
+}
+
+@keyframes gentlePulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.85;
+  }
+}
+
+.animate-gentle-pulse {
+  animation: gentlePulse 3s ease-in-out infinite;
+}
+
+@keyframes stampImpact {
+  0% {
+    transform: scale(2.2) rotate(-14deg);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(0.92) rotate(-6deg);
+    opacity: 1;
+  }
+  80% {
+    transform: scale(1.03) rotate(-9deg);
+  }
+  100% {
+    transform: scale(1) rotate(-8deg);
+    opacity: 1;
+  }
+}
+
+.animate-stamp-impact {
+  animation: stampImpact 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+/* Modern subtle glow & interactive utilities */
+.modern-card-shadow {
+  box-shadow: 0 1px 3px 0 rgba(74, 55, 40, 0.05), 0 1px 2px -1px rgba(74, 55, 40, 0.05);
+}
+
+.modern-card-hover {
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modern-card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -5px rgba(74, 55, 40, 0.08), 0 8px 10px -6px rgba(74, 55, 40, 0.04);
+}
+
+/* Custom scrollbars matching Natural Tones */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #f5f5f0;
+}
+::-webkit-scrollbar-thumb {
+  background: #DCD7CE;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #C4BDAF;
+}
+
+/* Custom Cadastral GIS Leaflet Map Overrides */
+.leaflet-container {
+  font-family: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+  background-color: #1a1a12 !important;
+}
+
+.cadastral-custom-popup .leaflet-popup-content-wrapper {
+  background: #FAF8F5;
+  color: #33332A;
+  border-radius: 10px;
+  border: 1px solid #DCD7CE;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.35);
+  padding: 0;
+}
+
+.cadastral-custom-popup .leaflet-popup-tip {
+  background: #FAF8F5;
+  border: 1px solid #DCD7CE;
+}
+
+.cadastral-custom-popup .leaflet-popup-content {
+  margin: 10px 12px;
+}
+
+.custom-cadastral-label {
+  background: transparent !important;
+  border: none !important;
+}
+
+.selected-khasra-pin {
+  background: transparent !important;
+  border: none !important;
+}
+
+/* Archival PDF Print Stylesheet */
+@media print {
+  /* Hide non-printable app UI elements */
+  header,
+  nav,
+  footer,
+  .no-print,
+  .print-hidden,
+  button:not(.print-include),
+  #modal-logout-confirm {
+    display: none !important;
+  }
+
+  body {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    font-family: Georgia, Cambria, "Times New Roman", Times, serif;
+    font-size: 10.5pt;
+    line-height: 1.4;
+    margin: 0 !important;
+    padding: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Make print container take full viewport and reset modal overlays */
+  .archival-print-wrapper {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
+    z-index: 99999 !important;
+  }
+
+  .archival-print-sheet {
+    box-shadow: none !important;
+    border: none !important;
+    margin: 0 auto !important;
+    padding: 10mm 12mm 15mm 12mm !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    background: #ffffff !important;
+  }
+
+  @page {
+    size: A4 portrait;
+    margin: 10mm 10mm 12mm 10mm;
+  }
+
+  .page-break-inside-avoid {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .page-break-before-always {
+    break-before: page !important;
+    page-break-before: always !important;
+  }
+
+  /* Optimize table printing */
+  table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+  }
+
+  thead {
+    display: table-header-group !important;
+  }
+
+  tr {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+}
