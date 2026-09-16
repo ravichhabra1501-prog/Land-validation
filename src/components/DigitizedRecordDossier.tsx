@@ -20,9 +20,11 @@ import {
   Search, 
   ChevronRight,
   MapPin,
-  FileCheck
+  FileCheck,
+  Calendar,
+  MessageSquare
 } from 'lucide-react';
-import { ExtractedLandRecord } from '../types';
+import { ExtractedLandRecord, UserRole } from '../types';
 import { CadastralPlot } from '../data/cadastralPlotsData';
 import { calculateBoundarySegments, calculatePerimeterMeters } from '../utils/cadastralUtils';
 
@@ -33,6 +35,8 @@ interface DigitizedRecordDossierProps {
   onSelectRecord: (record: ExtractedLandRecord) => void;
   onNavigateToVerification?: () => void;
   onSelectPlotByKhasra?: (khasra: string) => void;
+  userRole?: UserRole;
+  onScheduleWithGisOfficer?: (khasra: string, village?: string) => void;
 }
 
 export const DigitizedRecordDossier: React.FC<DigitizedRecordDossierProps> = ({
@@ -41,7 +45,9 @@ export const DigitizedRecordDossier: React.FC<DigitizedRecordDossierProps> = ({
   allRecords,
   onSelectRecord,
   onNavigateToVerification,
-  onSelectPlotByKhasra
+  onSelectPlotByKhasra,
+  userRole,
+  onScheduleWithGisOfficer
 }) => {
   const [activeDossierTab, setActiveDossierTab] = useState<'concordance' | 'boundaries' | 'owners' | 'scan' | 'mutations'>('concordance');
   const [copiedUlpin, setCopiedUlpin] = useState<boolean>(false);
@@ -140,26 +146,33 @@ export const DigitizedRecordDossier: React.FC<DigitizedRecordDossierProps> = ({
         <div className="flex items-center justify-between gap-3 pt-1">
           <div className="flex items-center gap-1.5 text-xs text-[#6B6B58]">
             <FileText className="w-3.5 h-3.5 text-[#5A5A40]" />
-            <span className="font-semibold">Compare Record:</span>
-            <select
-              id="select-dossier-record"
-              value={record.id}
-              onChange={(e) => {
-                const found = allRecords.find((r) => r.id === e.target.value);
-                if (found) onSelectRecord(found);
-              }}
-              aria-label="Select Digitized Record to Compare"
-              className="bg-[#FAF8F5] border border-[#DCD7CE] rounded px-2 py-1 text-xs font-bold text-[#33332A] focus:outline-hidden cursor-pointer"
-            >
-              {allRecords.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.village.value} - Khasra #{r.khasraNumber.value} ({r.primaryOwnerName.value})
-                </option>
-              ))}
-            </select>
+            <span className="font-semibold">{userRole === 'CITIZEN_VIEWER' ? 'Your Land Record:' : 'Compare Record:'}</span>
+            {userRole === 'CITIZEN_VIEWER' ? (
+              <span className="bg-[#FAF8F5] border border-[#BCD4C0] text-emerald-950 px-2 py-0.5 rounded text-xs font-bold flex items-center gap-1">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
+                {record.village?.value || record.village} - Gat #{record.khasraNumber?.value} ({record.primaryOwnerName?.value})
+              </span>
+            ) : (
+              <select
+                id="select-dossier-record"
+                value={record.id}
+                onChange={(e) => {
+                  const found = allRecords.find((r) => r.id === e.target.value);
+                  if (found) onSelectRecord(found);
+                }}
+                aria-label="Select Digitized Record to Compare"
+                className="bg-[#FAF8F5] border border-[#DCD7CE] rounded px-2 py-1 text-xs font-bold text-[#33332A] focus:outline-hidden cursor-pointer"
+              >
+                {allRecords.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.village?.value || r.village} - Khasra #{r.khasraNumber?.value} ({r.primaryOwnerName?.value})
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
-          {onNavigateToVerification && (
+          {onNavigateToVerification && userRole !== 'CITIZEN_VIEWER' && (
             <button
               id="btn-dossier-open-workspace"
               onClick={onNavigateToVerification}
@@ -820,28 +833,56 @@ export const DigitizedRecordDossier: React.FC<DigitizedRecordDossierProps> = ({
       {/* 4. Action Footer */}
       <div className="p-3 border-t border-[#DCD7CE] bg-[#F5F3EE] flex flex-wrap items-center justify-between gap-2 text-xs">
         <div className="flex items-center gap-2">
-          {onNavigateToVerification && (
-            <button
-              id="btn-open-in-verification"
-              onClick={onNavigateToVerification}
-              className="px-3 py-1.5 rounded-lg bg-[#5A5A40] hover:bg-[#43432F] text-[#FFF9EA] font-semibold flex items-center gap-1.5 cursor-pointer shadow-2xs"
-            >
-              <FileCheck className="w-3.5 h-3.5" />
-              <span>Open in Verification Station</span>
-            </button>
-          )}
+          {userRole === 'CITIZEN_VIEWER' ? (
+            <>
+              {onScheduleWithGisOfficer && (
+                <button
+                  id="btn-citizen-schedule-gis-officer"
+                  onClick={() => onScheduleWithGisOfficer(selectedPlot.khasra, selectedPlot.village)}
+                  className="px-3 py-1.5 rounded-lg bg-[#5A5A40] hover:bg-[#43432F] text-[#FFF9EA] font-semibold flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                >
+                  <Calendar className="w-3.5 h-3.5" />
+                  <span>Schedule Hearing with GIS Officer</span>
+                </button>
+              )}
 
-          <button
-            id="btn-flag-discrepancy"
-            onClick={() => {
-              setShowDiscrepancyToast(true);
-              setTimeout(() => setShowDiscrepancyToast(false), 3000);
-            }}
-            className="px-3 py-1.5 rounded-lg bg-[#FAF8F5] hover:bg-[#EBE7DF] border border-[#DCD7CE] text-[#4A3728] font-semibold flex items-center gap-1.5 cursor-pointer"
-          >
-            <AlertTriangle className="w-3.5 h-3.5 text-[#8B4513]" />
-            <span>Flag Alignment Notice</span>
-          </button>
+              {onScheduleWithGisOfficer && (
+                <button
+                  id="btn-citizen-submit-feedback"
+                  onClick={() => onScheduleWithGisOfficer(selectedPlot.khasra, selectedPlot.village)}
+                  className="px-3 py-1.5 rounded-lg bg-[#FAF8F5] hover:bg-[#EBE7DF] border border-[#DCD7CE] text-[#4A3728] font-semibold flex items-center gap-1.5 cursor-pointer"
+                >
+                  <MessageSquare className="w-3.5 h-3.5 text-[#5A5A40]" />
+                  <span>Submit Parcel Feedback</span>
+                </button>
+              )}
+            </>
+          ) : (
+            <>
+              {onNavigateToVerification && (
+                <button
+                  id="btn-open-in-verification"
+                  onClick={onNavigateToVerification}
+                  className="px-3 py-1.5 rounded-lg bg-[#5A5A40] hover:bg-[#43432F] text-[#FFF9EA] font-semibold flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                >
+                  <FileCheck className="w-3.5 h-3.5" />
+                  <span>Open in Verification Station</span>
+                </button>
+              )}
+
+              <button
+                id="btn-flag-discrepancy"
+                onClick={() => {
+                  setShowDiscrepancyToast(true);
+                  setTimeout(() => setShowDiscrepancyToast(false), 3000);
+                }}
+                className="px-3 py-1.5 rounded-lg bg-[#FAF8F5] hover:bg-[#EBE7DF] border border-[#DCD7CE] text-[#4A3728] font-semibold flex items-center gap-1.5 cursor-pointer"
+              >
+                <AlertTriangle className="w-3.5 h-3.5 text-[#8B4513]" />
+                <span>Flag Alignment Notice</span>
+              </button>
+            </>
+          )}
         </div>
 
         {showDiscrepancyToast && (

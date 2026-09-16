@@ -155,6 +155,23 @@ export interface ExtractedLandRecord {
     notes?: string;
   }[];
   modificationHistory?: RecordModificationEntry[];
+  changeLog?: ChangeLogEntry[];
+}
+
+export interface ChangeLogEntry {
+  id: string;
+  timestamp: string; // ISO 8601 string e.g. "2026-09-02T10:25:00Z"
+  officerName: string; // Name of the officer or system who performed the change
+  role: UserRole | 'SYSTEM' | 'AI_OCR_ENGINE' | string;
+  action: string; // e.g. 'FIELD_CORRECTION', 'SANCTION_APPROVAL', 'STATUS_CHANGE', 'INITIAL_INGESTION', 'ADMINISTRATIVE_NOTE'
+  fieldKey?: string; // e.g. "khasraNumber", "primaryOwnerName", "totalAreaDeclared"
+  fieldLabel?: string; // Human readable field label e.g. "Khasra / Gat Number"
+  oldValue?: string; // Prior value before modification
+  newValue?: string; // New value after modification
+  reason?: string; // Reason or verification discrepancy justification
+  remarks?: string; // Extended officer notes or legal reference
+  digitalSignature?: string; // DSC electronic token or attestation hash
+  sourceTerminal?: string; // Device or terminal workstation ID
 }
 
 export type ModificationChangeType = 
@@ -196,6 +213,8 @@ export interface AuthUser {
   avatarInitials: string;
   badgeNumber?: string;
   digitalTokenId?: string;
+  assignedVillage?: string;
+  assignedKhasra?: string;
 }
 
 export interface StateDigitizationProgress {
@@ -220,5 +239,48 @@ export interface ValidationTrendDataPoint {
   totalProcessed: number;
   passRate: number; // percentage, e.g. 91.5
   cumulativeSanctioned: number;
+}
+
+export type CitizenFeedbackCategory = 
+  | 'BOUNDARY_DISCREPANCY' // Boundary Demarcation & Medhbandi
+  | 'AREA_VARIANCE' // Area Discrepancy between Ground & RoR Record
+  | 'CO_SHARER_DISPUTE' // Hissa division / co-sharer boundary clarification
+  | 'DRONE_SURVEY_INQUIRY' // SVAMITVA / Drone Orthophoto Ground-Truthing
+  | 'MUTATION_INQUIRY' // Mutation / Title Transfer Delay
+  | 'GENERAL_FEEDBACK'; // General Portal Feedback / Suggestion
+
+export type ConsultationMode = 
+  | 'IN_PERSON_TEHSIL' // In-person at Tehsil Cadastral GIS Center
+  | 'FIELD_DEMARCATION' // On-site Field Demarcation by GIS Surveyor
+  | 'VIRTUAL_MEETING'; // Virtual Video Consultation (NIC Video Meet)
+
+export type AppointmentStatus = 
+  | 'SCHEDULED'
+  | 'CONFIRMED'
+  | 'SURVEY_DISPATCHED'
+  | 'RESOLVED'
+  | 'CANCELLED';
+
+export interface CitizenAppointment {
+  id: string; // e.g. "GIS-APT-2026-8801"
+  citizenName: string;
+  citizenPhone: string;
+  citizenAadhaarOrId?: string;
+  citizenEmail?: string;
+  village: string;
+  khasraNumber: string;
+  khataNumber?: string;
+  category: CitizenFeedbackCategory;
+  feedbackText: string;
+  consultationMode: ConsultationMode;
+  preferredDate: string; // e.g. "2026-09-22"
+  preferredTimeSlot: string; // e.g. "11:00 AM - 11:45 AM"
+  assignedOfficerName: string; // e.g. "Dr. Priya Nair"
+  assignedOfficerDesignation: string; // e.g. "Settlement & Cadastral GIS Officer"
+  status: AppointmentStatus;
+  createdAt: string;
+  officerRemarks?: string;
+  venueOrMeetingLink?: string;
+  rescheduledCount?: number;
 }
 

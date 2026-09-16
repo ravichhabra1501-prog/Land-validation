@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Navbar } from './components/Navbar';
 import { DashboardView } from './components/DashboardView';
@@ -11,14 +11,26 @@ import { DocumentIngestionView } from './components/DocumentIngestionView';
 import { VerificationStationView } from './components/VerificationStationView';
 import { CadastralGisView } from './components/CadastralGisView';
 import { ValidationRulesView } from './components/ValidationRulesView';
+import { CitizenFeedbackScheduleView } from './components/CitizenFeedbackScheduleView';
 import { LoginView } from './components/LoginView';
-import { ExtractedLandRecord, UserRole, IndicLanguage, AuthUser } from './types';
+import { ExtractedLandRecord, UserRole, IndicLanguage, AuthUser, CitizenAppointment } from './types';
 import { INITIAL_LAND_RECORDS } from './data/sampleRecords';
+import { INITIAL_CITIZEN_APPOINTMENTS } from './data/sampleAppointments';
 import { runAutomatedValidationRules } from './services/landRecordService';
 import { PRESET_OFFICER_PERSONAS, AUTH_STORAGE_KEY } from './data/authPersonas';
-import { ShieldCheck, Layers, Sparkles } from 'lucide-react';
+import { ShieldCheck, Layers, Sparkles, Database } from 'lucide-react';
+import { getTranslations, getStoredLanguage, setStoredLanguage } from './utils/translations';
+import { 
+  testFirestoreConnection, 
+  subscribeToLandRecords, 
+  saveLandRecordToFirestore, 
+  saveBatchLandRecordsToFirestore,
+  subscribeToCitizenAppointments,
+  saveCitizenAppointmentToFirestore
+} from './services/firebase';
 
 export default function App() {
+  const [isDbConnected, setIsDbConnected] = useState<boolean>(false);
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => {
     try {
       const saved = localStorage.getItem(AUTH_STORAGE_KEY);
@@ -31,30 +43,47 @@ export default function App() {
   });
 
   const [loggedOutNotice, setLoggedOutNotice] = useState<string | null>(null);
-  const [currentTab, setCurrentTab] = useState<'dashboard' | 'ingestion' | 'verification' | 'rules' | 'gis'>('dashboard');
   const [userRole, setUserRoleState] = useState<UserRole>(() => currentUser?.role || 'REVENUE_OFFICER');
-  const [selectedLanguage, setSelectedLanguage] = useState<IndicLanguage>('english');
+  const [currentTab, setCurrentTab] = useState<'dashboard' | 'ingestion' | 'verification' | 'rules' | 'gis' | 'citizen_feedback'>(() => {
+    return (currentUser?.role === 'CITIZEN_VIEWER') ? 'gis' : 'dashboard';
+  });
+  const [selectedLanguage, setSelectedLanguage] = useState<IndicLanguage>(() => getStoredLanguage());
 
-  const setUserRole = (role: UserRole) => {
-    setUserRoleState(role);
-    if (currentUser) {
-      const updatedUser: AuthUser = {
-        ...PRESET_OFFICER_PERSONAS[role],
-        loginTimestamp: currentUser.loginTimestamp
-      };
-      setCurrentUser(updatedUser);
-      try {
-        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(updatedUser));
-      } catch {
-        // ignore
-      }
-    }
+  const handleLanguageChange = (lang: IndicLanguage) => {
+    setSelectedLanguage(lang);
+    setStoredLanguage(lang);
   };
+
+  const t = getTranslations(selectedLanguage);
+
+  // Citizen Feedback & Scheduling States
+  const [citizenAppointments, setCitizenAppointments] = useState<CitizenAppointment[]>(INITIAL_CITIZEN_APPOINTMENTS);
+  const [preselectedKhasraForScheduling, setPreselectedKhasraForScheduling] = useState<string | undefined>();
+  const [preselectedVillageForScheduling, setPreselectedVillageForScheduling] = useState<string | undefined>();
+
+  // Citizen view guard: if citizen view, can only view land map ('gis') and feedback with schedule with cadastral GIS officer ('citizen_feedback')
+  useEffect(() => {
+    if (userRole === 'CITIZEN_VIEWER' && currentTab !== 'gis' && currentTab !== 'citizen_feedback') {
+      setCurrentTab('gis');
+    }
+  }, [userRole, currentTab]);
 
   const handleLogin = (user: AuthUser) => {
     setCurrentUser(user);
     setUserRoleState(user.role);
     setLoggedOutNotice(null);
+    if (user.role === 'CITIZEN_VIEWER') {
+      setCurrentTab('gis');
+      const targetVillage = user.assignedVillage || 'Wagholi';
+      const targetKhasra = user.assignedKhasra || '142/1';
+      const citizenRec = records.find(r => {
+        const v = r.village?.value || (typeof r.village === 'string' ? r.village : '');
+        return v && v.toLowerCase() === targetVillage.toLowerCase() && r.khasraNumber?.value === targetKhasra;
+      }) || records[0];
+      if (citizenRec) {
+        setSelectedRecord(citizenRec);
+      }
+    }
     try {
       localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
     } catch {
@@ -82,6 +111,71 @@ export default function App() {
 
   const [selectedRecord, setSelectedRecord] = useState<ExtractedLandRecord>(records[0]);
 
+  // Citizen data isolation parameters
+  const isCitizen = userRole === 'CITIZEN_VIEWER';
+  const citizenVillage = currentUser?.assignedVillage || 'Wagholi';
+  const citizenKhasra = currentUser?.assignedKhasra || '142/1';
+
+  // Strict citizen land isolation: only records belonging to the citizen's assigned village
+  const visibleRecords = useMemo(() => {
+    if (!isCitizen) return records;
+    const filtered = records.filter(r => {
+      const v = r.village?.value || (typeof r.village === 'string' ? r.village : '');
+      return v && v.toLowerCase() === citizenVillage.toLowerCase();
+    });
+    return filtered.length > 0 ? filtered : [records[0]];
+  }, [records, isCitizen, citizenVillage]);
+
+  // Synchronize selectedRecord when citizen view is active
+  useEffect(() => {
+    if (isCitizen) {
+      const currentVil = selectedRecord?.village?.value || (typeof selectedRecord?.village === 'string' ? selectedRecord.village : '');
+      if (currentVil.toLowerCase() !== citizenVillage.toLowerCase() || selectedRecord?.khasraNumber?.value !== citizenKhasra) {
+        const citizenRec = visibleRecords.find(r => r.khasraNumber?.value === citizenKhasra) || visibleRecords[0];
+        if (citizenRec) {
+          setSelectedRecord(citizenRec);
+        }
+      }
+    }
+  }, [isCitizen, citizenVillage, citizenKhasra, selectedRecord, visibleRecords]);
+
+  // Firebase Firestore live database synchronization and connection validation
+  useEffect(() => {
+    testFirestoreConnection().then(connected => {
+      setIsDbConnected(connected);
+    });
+
+    const unsubscribeRecords = subscribeToLandRecords(
+      (firestoreRecords) => {
+        if (firestoreRecords && firestoreRecords.length > 0) {
+          setRecords(firestoreRecords);
+          setSelectedRecord(prev => {
+            if (!prev) return firestoreRecords[0];
+            const updated = firestoreRecords.find(r => r.id === prev.id);
+            return updated || firestoreRecords[0];
+          });
+          setIsDbConnected(true);
+        }
+      },
+      (err) => {
+        console.warn('Firestore real-time sync notice:', err);
+      }
+    );
+
+    const unsubscribeAppointments = subscribeToCitizenAppointments(
+      (firestoreAppointments) => {
+        if (firestoreAppointments && firestoreAppointments.length > 0) {
+          setCitizenAppointments(firestoreAppointments);
+        }
+      }
+    );
+
+    return () => {
+      unsubscribeRecords();
+      unsubscribeAppointments();
+    };
+  }, []);
+
   // Calculate pending reviews for badge
   const pendingReviewCount = records.filter(r => r.status === 'NEEDS_REVIEW').length;
 
@@ -93,17 +187,26 @@ export default function App() {
   const handleRecordIngested = (newRecord: ExtractedLandRecord) => {
     setRecords(prev => [newRecord, ...prev]);
     setSelectedRecord(newRecord);
+    saveLandRecordToFirestore(newRecord).catch(err => {
+      console.warn('Could not persist ingested record to Firestore:', err);
+    });
   };
 
   const handleUpdateRecord = (updatedRecord: ExtractedLandRecord) => {
     setRecords(prev => prev.map(r => r.id === updatedRecord.id ? updatedRecord : r));
     setSelectedRecord(updatedRecord);
+    saveLandRecordToFirestore(updatedRecord).catch(err => {
+      console.warn('Could not persist updated record to Firestore:', err);
+    });
   };
 
   const handleUpdateAllRecords = (updatedRecords: ExtractedLandRecord[]) => {
     setRecords(updatedRecords);
     const updatedSelected = updatedRecords.find(r => r.id === selectedRecord.id) || updatedRecords[0];
     setSelectedRecord(updatedSelected);
+    saveBatchLandRecordsToFirestore(updatedRecords).catch(err => {
+      console.warn('Could not persist batch records to Firestore:', err);
+    });
   };
 
   if (!currentUser) {
@@ -111,7 +214,7 @@ export default function App() {
       <LoginView
         onLogin={handleLogin}
         selectedLanguage={selectedLanguage}
-        onLanguageChange={setSelectedLanguage}
+        onLanguageChange={handleLanguageChange}
         loggedOutNotice={loggedOutNotice}
         onDismissNotice={() => setLoggedOutNotice(null)}
       />
@@ -125,12 +228,12 @@ export default function App() {
         currentTab={currentTab}
         setCurrentTab={setCurrentTab}
         userRole={userRole}
-        setUserRole={setUserRole}
         selectedLanguage={selectedLanguage}
-        setSelectedLanguage={setSelectedLanguage}
+        setSelectedLanguage={handleLanguageChange}
         pendingReviewCount={pendingReviewCount}
         currentUser={currentUser}
         onLogout={handleLogout}
+        citizenAppointmentCount={citizenAppointments.length}
       />
 
       {/* Sub-header Live Status & Operational Context Ribbon */}
@@ -141,18 +244,25 @@ export default function App() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#82B37A] opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-[#3D5A40]"></span>
             </span>
-            <span className="font-semibold text-[#33332A]">DILRMP High-Security Session Active</span>
+            <span className="font-semibold text-[#33332A]">{t.sessionActive}</span>
             <span className="text-[#6B6B58] hidden sm:inline">•</span>
             <span className="text-[#6B6B58] hidden sm:inline font-mono">NODE-AS-EAST-1</span>
           </div>
 
           <div className="flex items-center gap-3 text-[11px] text-[#5A5A40]">
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[#EAF2EB] border border-[#BCD4C0] text-[#3D5A40]">
+              <Database className="w-3 h-3 text-[#3D5A40]" />
+              <span className="font-medium">Firebase Firestore:</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded bg-[#3D5A40] text-white">
+                {isDbConnected ? 'Live' : 'Connecting'}
+              </span>
+            </span>
             <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[#EBE7DF]/70 border border-[#DCD7CE]">
-              <span className="font-medium">Total Records:</span>
+              <span className="font-medium">{t.totalRecords}:</span>
               <span className="font-bold text-[#33332A]">{records.length}</span>
             </span>
             <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[#FFF9EA] border border-[#DCD7CE] text-[#8B4513]">
-              <span className="font-medium">Pending Review:</span>
+              <span className="font-medium">{t.pendingReview}:</span>
               <span className="font-bold">{pendingReviewCount}</span>
             </span>
           </div>
@@ -178,6 +288,7 @@ export default function App() {
                 onNavigateToVerification={() => setCurrentTab('verification')}
                 onUpdateRecords={handleUpdateAllRecords}
                 currentUser={currentUser}
+                selectedLanguage={selectedLanguage}
               />
             )}
 
@@ -210,10 +321,48 @@ export default function App() {
 
             {currentTab === 'gis' && (
               <CadastralGisView
-                records={records}
+                records={visibleRecords}
                 selectedRecord={selectedRecord}
                 onSelectRecord={setSelectedRecord}
                 onNavigateToVerification={() => setCurrentTab('verification')}
+                userRole={userRole}
+                currentUser={currentUser}
+                onNavigateToFeedbackSchedule={(khasra, village) => {
+                  setPreselectedKhasraForScheduling(khasra);
+                  setPreselectedVillageForScheduling(village);
+                  setCurrentTab('citizen_feedback');
+                }}
+              />
+            )}
+
+            {currentTab === 'citizen_feedback' && (
+              <CitizenFeedbackScheduleView
+                currentUser={currentUser}
+                records={visibleRecords}
+                appointments={citizenAppointments}
+                onAddAppointment={(newApt) => {
+                  setCitizenAppointments(prev => [newApt, ...prev]);
+                  saveCitizenAppointmentToFirestore(newApt).catch(err => {
+                    console.warn('Could not persist appointment to Firestore:', err);
+                  });
+                }}
+                onUpdateAppointment={(updatedApt) => {
+                  setCitizenAppointments(prev => prev.map(a => a.id === updatedApt.id ? updatedApt : a));
+                  saveCitizenAppointmentToFirestore(updatedApt).catch(err => {
+                    console.warn('Could not persist updated appointment to Firestore:', err);
+                  });
+                }}
+                onNavigateToMap={(khasra) => {
+                  if (khasra) {
+                    const matched = visibleRecords.find(r => r.khasraNumber?.value?.trim() === khasra.trim());
+                    if (matched) {
+                      setSelectedRecord(matched);
+                    }
+                  }
+                  setCurrentTab('gis');
+                }}
+                initialKhasra={preselectedKhasraForScheduling}
+                initialVillage={preselectedVillageForScheduling}
               />
             )}
           </motion.div>

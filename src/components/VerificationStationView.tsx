@@ -25,12 +25,16 @@ import {
   User,
   MapPin,
   Stamp,
-  History
+  History,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
-import { ExtractedLandRecord, UserRole, RecordModificationEntry } from '../types';
+import { ExtractedLandRecord, UserRole, RecordModificationEntry, ChangeLogEntry } from '../types';
 import { runAutomatedValidationRules, generateDilrmpXml } from '../services/landRecordService';
 import { ModificationHistoryModal } from './ModificationHistoryModal';
 import { getRecordModificationHistory } from '../utils/modificationHistoryUtils';
+import { getRecordChangeLog } from '../utils/changeLogUtils';
+import { RecordChangeLogTimeline } from './RecordChangeLogTimeline';
 import { ValidationRuleTooltip, InputGuidanceBanner } from './ValidationRuleTooltip';
 
 interface VerificationStationViewProps {
@@ -65,6 +69,10 @@ export const VerificationStationView: React.FC<VerificationStationViewProps> = (
   // Modification History Modal State
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState<boolean>(false);
 
+  // Active Station Tab in Right Pane: 'FIELDS' or 'CHANGELOG'
+  const [stationTab, setStationTab] = useState<'FIELDS' | 'CHANGELOG'>('FIELDS');
+  const [isTimelineSectionExpanded, setIsTimelineSectionExpanded] = useState<boolean>(true);
+
   const isRevenueOfficer = userRole === 'REVENUE_OFFICER' || userRole === 'SETTLEMENT_OFFICER';
   const currentIndex = records.findIndex(r => r.id === selectedRecord.id);
 
@@ -73,6 +81,12 @@ export const VerificationStationView: React.FC<VerificationStationViewProps> = (
     return getRecordModificationHistory(selectedRecord);
   }, [selectedRecord]);
   const latestModification = modificationHistoryList[0];
+
+  // Compute live changeLog timeline list
+  const changeLogList = useMemo(() => {
+    return getRecordChangeLog(selectedRecord);
+  }, [selectedRecord]);
+  const latestChangeLog = changeLogList[0];
 
   // Navigate between records in the queue
   const handlePrevRecord = () => {
@@ -101,9 +115,27 @@ export const VerificationStationView: React.FC<VerificationStationViewProps> = (
   // Append new manual modification entry from modal
   const handleAddModification = (entry: RecordModificationEntry) => {
     const prevHistory = getRecordModificationHistory(selectedRecord);
+    const prevChangeLog = getRecordChangeLog(selectedRecord);
+    const changeLogItem: ChangeLogEntry = {
+      id: entry.id,
+      timestamp: entry.timestamp,
+      officerName: entry.userName,
+      role: entry.userRole,
+      action: entry.changeType,
+      fieldKey: entry.fieldKey,
+      fieldLabel: entry.fieldLabel,
+      oldValue: entry.previousValue,
+      newValue: entry.newValue,
+      reason: entry.reason,
+      remarks: entry.notes,
+      digitalSignature: entry.digitalSignatureRef,
+      sourceTerminal: entry.sourceTerminal
+    };
+
     const updated: ExtractedLandRecord = {
       ...selectedRecord,
-      modificationHistory: [entry, ...prevHistory]
+      modificationHistory: [entry, ...prevHistory],
+      changeLog: [changeLogItem, ...prevChangeLog]
     };
     onUpdateRecord(updated);
   };
@@ -147,9 +179,10 @@ export const VerificationStationView: React.FC<VerificationStationViewProps> = (
       updated.landClassification = { ...updated.landClassification, value: fieldEditValue, confidence: 99, isFlagged: false };
     }
 
-    // Append to timestamped modification history
+    // Append to timestamped modification history & changeLog
     if (origVal !== fieldEditValue) {
       const prevHistory = getRecordModificationHistory(selectedRecord);
+      const prevChangeLog = getRecordChangeLog(selectedRecord);
       const reasonLabel = correctionReason === 'CHARACTER_ERROR'
         ? 'Character / Ink Glitch Correction'
         : correctionReason === 'LANGUAGE_TRANSLITERATION'
@@ -158,11 +191,15 @@ export const VerificationStationView: React.FC<VerificationStationViewProps> = (
         ? 'Numeric Confusion Correction'
         : 'Human-in-the-Loop Field Rectification';
 
+      const changeId = `MOD-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+      const nowIso = new Date().toISOString();
+      const officerDisplayName = isRevenueOfficer ? 'SDM / Revenue Officer' : 'Patwari / Verification Specialist';
+
       const newModEntry: RecordModificationEntry = {
-        id: `MOD-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-        timestamp: new Date().toISOString(),
+        id: changeId,
+        timestamp: nowIso,
         userId: isRevenueOfficer ? 'OFF-REV-094' : 'SPEC-PAT-108',
-        userName: isRevenueOfficer ? 'SDM / Revenue Officer' : 'Patwari / Verification Specialist',
+        userName: officerDisplayName,
         userRole: userRole,
         changeType: fieldKey === 'encumbranceStatus' ? 'ENCUMBRANCE_UPDATE' : 'FIELD_CORRECTION',
         fieldKey,
@@ -174,7 +211,23 @@ export const VerificationStationView: React.FC<VerificationStationViewProps> = (
         sourceTerminal: 'Verification Workstation Node #01'
       };
 
+      const newChangeLogEntry: ChangeLogEntry = {
+        id: `CL-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        timestamp: nowIso,
+        officerName: isRevenueOfficer ? 'SDM Alok Srivastava' : 'Patwari Rajesh Kumar Sharma',
+        role: userRole,
+        action: fieldKey === 'encumbranceStatus' ? 'ENCUMBRANCE_UPDATE' : 'FIELD_CORRECTION',
+        fieldKey,
+        fieldLabel,
+        oldValue: origVal || '(Empty)',
+        newValue: fieldEditValue,
+        reason: reasonLabel,
+        remarks: `Field "${fieldLabel}" updated during verification station review. Original value: "${origVal || 'none'}" → New value: "${fieldEditValue}".`,
+        sourceTerminal: 'Verification Workstation Node #01'
+      };
+
       updated.modificationHistory = [newModEntry, ...prevHistory];
+      updated.changeLog = [newChangeLogEntry, ...prevChangeLog];
     }
 
     // Re-run validation rules
@@ -186,6 +239,7 @@ export const VerificationStationView: React.FC<VerificationStationViewProps> = (
   // One-click sanction
   const handleSanctionAndSign = () => {
     const prevHistory = getRecordModificationHistory(selectedRecord);
+    const prevChangeLog = getRecordChangeLog(selectedRecord);
     const sanctionTimestamp = new Date().toISOString();
     const officerDisplayName = isRevenueOfficer ? 'SDM Alok Srivastava' : 'Revenue Official (Tehsildar)';
 
@@ -205,6 +259,21 @@ export const VerificationStationView: React.FC<VerificationStationViewProps> = (
       sourceTerminal: 'Revenue Court Official Portal'
     };
 
+    const sanctionChangeLogEntry: ChangeLogEntry = {
+      id: `CL-SANCT-${Date.now()}`,
+      timestamp: sanctionTimestamp,
+      officerName: officerDisplayName,
+      role: userRole,
+      action: 'SANCTION_APPROVAL',
+      fieldLabel: 'Record Sanction & Digital Attestation',
+      oldValue: selectedRecord.status,
+      newValue: 'VERIFIED_AND_SANCTIONED',
+      reason: 'Official Statutory Sanction & Revenue Seal',
+      remarks: 'DSC Electronic Verification Token #GOI-DILRMP-2026 appended. Record sanctioned for LRMS synchronization.',
+      digitalSignature: 'DSC-GOI-DILRMP-2026-X77A',
+      sourceTerminal: 'Revenue Court Official Portal'
+    };
+
     const updated: ExtractedLandRecord = {
       ...selectedRecord,
       status: 'VERIFIED_AND_SANCTIONED',
@@ -219,7 +288,8 @@ export const VerificationStationView: React.FC<VerificationStationViewProps> = (
           notes: 'DSC Electronic Verification Token #GOI-DILRMP-2026 appended.'
         }
       ],
-      modificationHistory: [sanctionModEntry, ...prevHistory]
+      modificationHistory: [sanctionModEntry, ...prevHistory],
+      changeLog: [sanctionChangeLogEntry, ...prevChangeLog]
     };
 
     // Clear flags on validation
@@ -499,11 +569,52 @@ export const VerificationStationView: React.FC<VerificationStationViewProps> = (
               transition={{ duration: 0.22, ease: 'easeOut' }}
               className="bg-[#FAF8F5] rounded-xl border border-[#DCD7CE] p-5 shadow-2xs space-y-4"
             >
-              {/* Header with Sanction Button */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#DCD7CE]">
+              {/* Header with View Tabs & Sanction Button */}
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-3 border-b border-[#DCD7CE]">
               <div>
-                <h3 className="text-sm font-bold text-[#33332A] natural-serif">Extracted Structured Record</h3>
-                <p className="text-xs text-[#6B6B58]">Standardized Land Administration Data Dictionary</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="text-sm font-bold text-[#33332A] natural-serif">
+                    {stationTab === 'FIELDS' ? 'Extracted Structured Record' : 'Record ChangeLog & Revision Timeline'}
+                  </h3>
+                  
+                  {/* Tab Switcher: Fields vs ChangeLog */}
+                  <div className="flex items-center rounded-lg bg-[#EBE7DF] p-0.5 border border-[#DCD7CE]">
+                    <button
+                      id="tab-btn-fields"
+                      type="button"
+                      onClick={() => setStationTab('FIELDS')}
+                      className={`px-2.5 py-1 text-xs font-bold rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${
+                        stationTab === 'FIELDS'
+                          ? 'bg-[#FAF8F5] text-[#33332A] shadow-2xs'
+                          : 'text-[#6B6B58] hover:text-[#33332A]'
+                      }`}
+                    >
+                      <FileCheck className="w-3.5 h-3.5 text-[#5A5A40]" />
+                      <span>Data Fields</span>
+                    </button>
+                    <button
+                      id="tab-btn-changelog"
+                      type="button"
+                      onClick={() => setStationTab('CHANGELOG')}
+                      className={`px-2.5 py-1 text-xs font-bold rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${
+                        stationTab === 'CHANGELOG'
+                          ? 'bg-[#FAF8F5] text-[#33332A] shadow-2xs'
+                          : 'text-[#6B6B58] hover:text-[#33332A]'
+                      }`}
+                    >
+                      <History className="w-3.5 h-3.5 text-[#8B4513]" />
+                      <span>ChangeLog</span>
+                      <span className="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold bg-[#EBE7DF] text-[#8B4513] border border-[#DCD7CE]">
+                        {changeLogList.length}
+                      </span>
+                    </button>
+                  </div>
+                </div>
+                <p className="text-xs text-[#6B6B58] mt-0.5">
+                  {stationTab === 'FIELDS' 
+                    ? 'Standardized Land Administration Data Dictionary & HITL OCR Verification'
+                    : 'Auditable chronological ledger of field corrections, encumbrance notes, and sanctions'}
+                </p>
               </div>
 
               <div className="flex items-center gap-2">
@@ -511,10 +622,10 @@ export const VerificationStationView: React.FC<VerificationStationViewProps> = (
                   id="btn-view-history-pane"
                   onClick={() => setIsHistoryModalOpen(true)}
                   className="px-3 py-1.5 rounded-lg border border-[#DCD7CE] bg-[#FAF8F5] hover:bg-[#EBE7DF] text-xs font-semibold text-[#4A3728] transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                  title="View timestamped modification history log"
+                  title="Open formal modification history modal"
                 >
                   <History className="w-3.5 h-3.5 text-[#8B4513]" />
-                  <span>History</span>
+                  <span>Audit Modal</span>
                   <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-[#EBE7DF] text-[#5A5A40]">
                     {modificationHistoryList.length}
                   </span>
@@ -546,23 +657,53 @@ export const VerificationStationView: React.FC<VerificationStationViewProps> = (
               <div className="flex items-center gap-2">
                 <History className="w-3.5 h-3.5 text-[#5A5A40]" />
                 <span className="text-[#33332A] font-semibold">
-                  Audit Trail: <span className="font-bold text-[#8B4513]">{modificationHistoryList.length} events logged</span>
+                  ChangeLog: <span className="font-bold text-[#8B4513]">{changeLogList.length} historical events</span>
                 </span>
-                {latestModification && (
+                {latestChangeLog && (
                   <span className="hidden sm:inline text-[#6B6B58] font-mono text-[11px]">
-                    &bull; Last modified by {latestModification.userName}
+                    &bull; Last edit by {latestChangeLog.officerName}
                   </span>
                 )}
               </div>
-              <button
-                id="btn-inspect-history-link"
-                onClick={() => setIsHistoryModalOpen(true)}
-                className="text-xs font-bold text-[#8B4513] hover:text-[#5A2D0C] hover:underline flex items-center gap-1 cursor-pointer"
-              >
-                <span>Inspect Modification Log</span>
-                <ArrowRight className="w-3 h-3" />
-              </button>
+              <div className="flex items-center gap-2">
+                {stationTab === 'FIELDS' ? (
+                  <button
+                    id="btn-switch-to-timeline-tab"
+                    type="button"
+                    onClick={() => setStationTab('CHANGELOG')}
+                    className="text-xs font-bold text-[#8B4513] hover:text-[#5A2D0C] hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>View ChangeLog Timeline</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </button>
+                ) : (
+                  <button
+                    id="btn-switch-to-fields-tab"
+                    type="button"
+                    onClick={() => setStationTab('FIELDS')}
+                    className="text-xs font-bold text-[#5A5A40] hover:text-[#33332A] hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <ArrowLeft className="w-3 h-3" />
+                    <span>Back to Data Fields</span>
+                  </button>
+                )}
+              </div>
             </div>
+
+            {stationTab === 'CHANGELOG' ? (
+              <div className="pt-1">
+                <RecordChangeLogTimeline
+                  record={selectedRecord}
+                  userRole={userRole}
+                  onUpdateRecord={onUpdateRecord}
+                  onSelectFieldToEdit={(fKey) => {
+                    setStationTab('FIELDS');
+                    handleStartEdit(fKey, '');
+                  }}
+                />
+              </div>
+            ) : (
+              <>
 
             {/* Section 1: Administrative Hierarchy */}
             <div className="space-y-2">
@@ -1182,6 +1323,54 @@ export const VerificationStationView: React.FC<VerificationStationViewProps> = (
                 })}
               </div>
             </div>
+
+            {/* Section 7: ChangeLog & Prior Edits Timeline */}
+            <div className="space-y-3 pt-3 border-t border-[#DCD7CE]">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-[#5A5A40] uppercase tracking-wider flex items-center gap-1.5 natural-serif">
+                  <History className="w-3.5 h-3.5 text-[#8B4513]" />
+                  Land Record ChangeLog &amp; Prior Edits ({changeLogList.length})
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setStationTab('CHANGELOG')}
+                    className="text-xs font-bold text-[#8B4513] hover:text-[#5A2D0C] hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>Full Tab View</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsTimelineSectionExpanded(!isTimelineSectionExpanded)}
+                    className="p-1 rounded hover:bg-[#EBE7DF] text-[#6B6B58] hover:text-[#33332A] cursor-pointer"
+                    title={isTimelineSectionExpanded ? 'Collapse ChangeLog' : 'Expand ChangeLog'}
+                  >
+                    {isTimelineSectionExpanded ? (
+                      <ChevronUp className="w-4 h-4" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {isTimelineSectionExpanded && (
+                <div className="bg-[#F5F3EE] rounded-lg border border-[#DCD7CE] p-3">
+                  <RecordChangeLogTimeline
+                    record={selectedRecord}
+                    userRole={userRole}
+                    onUpdateRecord={onUpdateRecord}
+                    onSelectFieldToEdit={(fKey) => {
+                      handleStartEdit(fKey, '');
+                    }}
+                    isInline={true}
+                  />
+                </div>
+              )}
+            </div>
+            </>
+            )}
           </motion.div>
         </AnimatePresence>
         </div>

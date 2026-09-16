@@ -28,10 +28,11 @@ import {
   Check,
   RotateCcw
 } from 'lucide-react';
-import { ExtractedLandRecord, StateDigitizationProgress, AuthUser, VerificationStatus, RecordModificationEntry } from '../types';
+import { ExtractedLandRecord, StateDigitizationProgress, AuthUser, VerificationStatus, RecordModificationEntry, IndicLanguage } from '../types';
 import { STATE_DIGITIZATION_DATA } from '../data/sampleRecords';
 import { ArchivalPdfReportModal } from './ArchivalPdfReportModal';
 import { ValidationTrendSparkline, MicroSparkline } from './ValidationTrendSparkline';
+import { getTranslations } from '../utils/translations';
 
 interface DashboardViewProps {
   records: ExtractedLandRecord[];
@@ -40,6 +41,7 @@ interface DashboardViewProps {
   onNavigateToVerification: () => void;
   onUpdateRecords?: (updatedRecords: ExtractedLandRecord[]) => void;
   currentUser?: AuthUser | null;
+  selectedLanguage?: IndicLanguage;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
@@ -48,8 +50,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onNavigateToIngestion,
   onNavigateToVerification,
   onUpdateRecords,
-  currentUser
+  currentUser,
+  selectedLanguage
 }) => {
+  const currentLang: IndicLanguage = selectedLanguage || 'english';
+  const t = getTranslations(currentLang);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStateFilter, setSelectedStateFilter] = useState<string>('ALL');
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
@@ -379,7 +384,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <input
                     id="input-search-records"
                     type="text"
-                    placeholder="Search Khasra, Owner, Village..."
+                    placeholder={t.searchPlaceholder}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-8 pr-3 py-1.5 text-xs rounded-lg border border-[#DCD7CE] bg-[#F5F3EE] text-[#33332A] focus:bg-[#FAF8F5] focus:outline-hidden focus:ring-1 focus:ring-[#5A5A40] w-44 sm:w-52"
@@ -516,10 +521,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
                           <div className="flex items-center gap-3 text-xs text-[#5A5A40] mt-1 flex-wrap">
                             <span className="font-medium text-[#33332A]">
-                              <span className="natural-serif font-semibold text-[#5A5A40]">Owner:</span> {record.primaryOwnerName.value}
+                              <span className="natural-serif font-semibold text-[#5A5A40]">{t.ownerName}:</span> {record.primaryOwnerName.value}
                             </span>
                             <span>•</span>
-                            <span><span className="natural-serif font-semibold text-[#5A5A40]">Area:</span> {record.totalAreaDeclared.value} {record.declaredUnit.value.toLowerCase()}</span>
+                            <span><span className="natural-serif font-semibold text-[#5A5A40]">{t.totalArea}:</span> {record.totalAreaDeclared.value} {record.declaredUnit.value.toLowerCase()}</span>
                             <span>•</span>
                             <span><span className="natural-serif font-semibold text-[#5A5A40]">Script:</span> {record.script}</span>
                           </div>
@@ -537,7 +542,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                               ? 'bg-[#EAF2EB] text-[#3D5A40] border border-[#BCD4C0]' 
                               : 'bg-[#FFF9EA] text-[#8B4513] border border-[#DCD7CE]'
                           }`}>
-                            {isVerified ? 'Sanctioned' : 'Needs Review'}
+                            {isVerified ? t.statusVerified : t.statusNeedsReview}
                           </span>
                         </div>
 

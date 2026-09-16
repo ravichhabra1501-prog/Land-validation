@@ -24,9 +24,11 @@ import {
   Layout,
   Scale,
   Sparkles,
-  Check
+  Check,
+  Calendar,
+  MessageSquare
 } from 'lucide-react';
-import { ExtractedLandRecord } from '../types';
+import { ExtractedLandRecord, UserRole, AuthUser } from '../types';
 import { CadastralGoogleMapView } from './CadastralGoogleMapView';
 import { DigitizedRecordDossier } from './DigitizedRecordDossier';
 import { CADASTRAL_PLOTS, CadastralPlot, VILLAGE_CENTERS } from '../data/cadastralPlotsData';
@@ -37,26 +39,40 @@ interface CadastralGisViewProps {
   selectedRecord: ExtractedLandRecord;
   onSelectRecord: (record: ExtractedLandRecord) => void;
   onNavigateToVerification?: () => void;
+  userRole?: UserRole;
+  currentUser?: AuthUser | null;
+  onNavigateToFeedbackSchedule?: (khasra?: string, village?: string) => void;
 }
 
 export const CadastralGisView: React.FC<CadastralGisViewProps> = ({
   records,
   selectedRecord,
   onSelectRecord,
-  onNavigateToVerification
+  onNavigateToVerification,
+  userRole,
+  currentUser,
+  onNavigateToFeedbackSchedule
 }) => {
   // View mode: 'split' (side-by-side record & map), 'standard' (map + compact inspector), or 'full_map'
   const [viewMode, setViewMode] = useState<'split' | 'standard' | 'full_map'>('split');
   const [activeLayer, setActiveLayer] = useState<'cadastral' | 'satellite' | 'soils' | 'disputes'>('satellite');
   
-  // Initialize village based on selected record if valid, otherwise Wagholi
-  const initialVillage = (selectedRecord?.village?.value && VILLAGE_CENTERS[selectedRecord.village.value])
+  const isCitizen = userRole === 'CITIZEN_VIEWER';
+  const citizenVillage = currentUser?.assignedVillage || 'Wagholi';
+  const citizenKhasra = currentUser?.assignedKhasra || '142/1';
+  // For citizens: toggle to see strictly their own parcel or the contiguous parcels of their village only
+  const [citizenLandScope, setCitizenLandScope] = useState<'MY_LAND_ONLY' | 'MY_VILLAGE'>('MY_LAND_ONLY');
+
+  // Initialize village based on citizen assignment if citizen, otherwise selected record if valid, otherwise Wagholi
+  const initialVillage = isCitizen
+    ? citizenVillage
+    : (selectedRecord?.village?.value && VILLAGE_CENTERS[selectedRecord.village.value])
     ? selectedRecord.village.value
     : 'Wagholi';
 
   const [activeVillage, setActiveVillage] = useState<string>(initialVillage);
   const [selectedPlotKhasra, setSelectedPlotKhasra] = useState<string>(
-    selectedRecord?.khasraNumber?.value || '142/1'
+    isCitizen ? citizenKhasra : (selectedRecord?.khasraNumber?.value || '142/1')
   );
   const [cadastralOpacity, setCadastralOpacity] = useState<number>(65);
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -66,16 +82,40 @@ export const CadastralGisView: React.FC<CadastralGisViewProps> = ({
 
   // Synchronize village and plot when incoming selectedRecord changes
   useEffect(() => {
+    if (isCitizen) {
+      setActiveVillage(citizenVillage);
+      if (selectedRecord?.khasraNumber?.value) {
+        setSelectedPlotKhasra(selectedRecord.khasraNumber.value);
+      }
+      return;
+    }
     if (selectedRecord?.village?.value && VILLAGE_CENTERS[selectedRecord.village.value]) {
       setActiveVillage(selectedRecord.village.value);
       if (selectedRecord.khasraNumber?.value) {
         setSelectedPlotKhasra(selectedRecord.khasraNumber.value);
       }
     }
-  }, [selectedRecord]);
+  }, [selectedRecord, isCitizen, citizenVillage]);
 
-  // Filter plots based on active village or search query
+  // Filter plots based on active village or search query, enforcing STRICT isolation for citizens
   const availablePlots = CADASTRAL_PLOTS.filter((plot) => {
+    if (isCitizen) {
+      // CITIZEN ISOLATION: Never show any parcel outside the citizen's assigned village
+      if (plot.village !== citizenVillage) return false;
+      if (citizenLandScope === 'MY_LAND_ONLY') {
+        return plot.khasra === citizenKhasra;
+      }
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        return (
+          plot.khasra.toLowerCase().includes(q) ||
+          plot.owner.toLowerCase().includes(q) ||
+          plot.khata.toLowerCase().includes(q)
+        );
+      }
+      return true;
+    }
+
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       return (
@@ -90,8 +130,9 @@ export const CadastralGisView: React.FC<CadastralGisViewProps> = ({
   });
 
   const currentPlot = 
-    CADASTRAL_PLOTS.find((p) => p.khasra === selectedPlotKhasra && p.village === activeVillage) ||
+    CADASTRAL_PLOTS.find((p) => p.khasra === selectedPlotKhasra && p.village === (isCitizen ? citizenVillage : activeVillage)) ||
     availablePlots[0] ||
+    CADASTRAL_PLOTS.find(p => p.village === (isCitizen ? citizenVillage : activeVillage)) ||
     CADASTRAL_PLOTS[0];
 
   // Geodesic boundary segments and perimeter for currently selected parcel
@@ -99,6 +140,9 @@ export const CadastralGisView: React.FC<CadastralGisViewProps> = ({
   const totalPerimeterMeters = calculatePerimeterMeters(currentPlot.coordinates);
 
   const handlePlotClick = (plot: CadastralPlot) => {
+    if (isCitizen && plot.village !== citizenVillage) {
+      return; // Do not allow citizen to view other villages
+    }
     setSelectedPlotKhasra(plot.khasra);
     if (plot.village !== activeVillage) {
       setActiveVillage(plot.village);
@@ -120,6 +164,7 @@ export const CadastralGisView: React.FC<CadastralGisViewProps> = ({
   };
 
   const handleVillageChange = (village: string) => {
+    if (isCitizen) return; // Disallow switching away from citizen's village
     setActiveVillage(village);
     const firstInVillage = CADASTRAL_PLOTS.find((p) => p.village === village);
     if (firstInVillage) {
@@ -152,6 +197,36 @@ export const CadastralGisView: React.FC<CadastralGisViewProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* Citizen Public Portal Ribbon if in Citizen Mode */}
+      {userRole === 'CITIZEN_VIEWER' && (
+        <div className="p-4 rounded-xl bg-[#FFF9EA] border border-[#DCD7CE] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-2xs">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-[#5A5A40] text-[#FFF9EA] flex items-center justify-center shrink-0">
+              <MapIcon className="w-5 h-5" />
+            </div>
+            <div>
+              <span className="font-bold text-[#33332A] text-sm natural-serif block">
+                Citizen Public Land Map View (सार्वजनिक भू-नक्शा)
+              </span>
+              <span className="text-[#6B6B58] text-xs">
+                Inspect land parcel boundaries, search your Khasra #{currentPlot.khasra}, or view village sheets. Have a boundary dispute or question?
+              </span>
+            </div>
+          </div>
+          {onNavigateToFeedbackSchedule && (
+            <button
+              id="btn-citizen-header-schedule"
+              type="button"
+              onClick={() => onNavigateToFeedbackSchedule(currentPlot.khasra, currentPlot.village)}
+              className="px-4 py-2 rounded-xl bg-[#5A5A40] hover:bg-[#43432F] text-[#FFF9EA] font-bold text-xs flex items-center gap-2 shrink-0 transition-colors cursor-pointer shadow-2xs"
+            >
+              <Calendar className="w-3.5 h-3.5" />
+              <span>Schedule GIS Officer Hearing</span>
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Top Banner with Layer Switcher, Village Selector, and Split-Screen Toggle */}
       <div className="bg-[#FAF8F5] rounded-xl border border-[#DCD7CE] p-5 shadow-2xs space-y-4">
         <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
@@ -168,11 +243,13 @@ export const CadastralGisView: React.FC<CadastralGisViewProps> = ({
                   Google Maps Satellite Connected
                 </span>
                 <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#F5F3EE] text-[#5A5A40] border border-[#DCD7CE]">
-                  {Object.keys(VILLAGE_CENTERS).length} Revenue Villages Active
+                  {isCitizen ? `1 Registered Village (${citizenVillage})` : `${Object.keys(VILLAGE_CENTERS).length} Revenue Villages Active`}
                 </span>
               </div>
               <p className="text-xs text-[#6B6B58] mt-0.5">
-                Side-by-side spatial boundary verification against digitized Land Records (RoR / 7-12 / Khatauni)
+                {isCitizen 
+                  ? 'Spatial boundary inspection for your registered agricultural landholding and contiguous village parcels'
+                  : 'Side-by-side spatial boundary verification against digitized Land Records (RoR / 7-12 / Khatauni)'}
               </p>
             </div>
           </div>
@@ -224,24 +301,32 @@ export const CadastralGisView: React.FC<CadastralGisViewProps> = ({
               </button>
             </div>
 
-            {/* Village Selector Dropdown */}
-            <div className="flex items-center gap-1.5 bg-[#F5F3EE] px-2.5 py-1.5 rounded-lg border border-[#DCD7CE] text-xs">
-              <Globe className="w-3.5 h-3.5 text-[#5A5A40]" />
-              <span className="text-[#6B6B58] font-semibold">Village:</span>
-              <select
-                id="select-village-location"
-                value={activeVillage}
-                onChange={(e) => handleVillageChange(e.target.value)}
-                aria-label="Select Village Cadastral Boundary Location"
-                className="bg-transparent font-bold text-[#33332A] focus:outline-hidden cursor-pointer"
-              >
-                {Object.entries(VILLAGE_CENTERS).map(([villageName, meta]) => (
-                  <option key={villageName} value={villageName}>
-                    {villageName}, {meta.district} ({stateAbbrMap[meta.state] || meta.state})
-                  </option>
-                ))}
-              </select>
-            </div>
+            {/* Village Selector Dropdown (Protected for Citizen Viewers) */}
+            {isCitizen ? (
+              <div className="flex items-center gap-1.5 bg-[#FAF8F5] px-3 py-1.5 rounded-lg border border-[#DCD7CE] text-xs">
+                <ShieldCheck className="w-4 h-4 text-emerald-700 shrink-0" />
+                <span className="text-[#6B6B58] font-semibold">Registered Land:</span>
+                <span className="font-bold text-[#33332A]">{citizenVillage}, Pune (Gat #{citizenKhasra})</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 bg-[#F5F3EE] px-2.5 py-1.5 rounded-lg border border-[#DCD7CE] text-xs">
+                <Globe className="w-3.5 h-3.5 text-[#5A5A40]" />
+                <span className="text-[#6B6B58] font-semibold">Village:</span>
+                <select
+                  id="select-village-location"
+                  value={activeVillage}
+                  onChange={(e) => handleVillageChange(e.target.value)}
+                  aria-label="Select Village Cadastral Boundary Location"
+                  className="bg-transparent font-bold text-[#33332A] focus:outline-hidden cursor-pointer"
+                >
+                  {Object.entries(VILLAGE_CENTERS).map(([villageName, meta]) => (
+                    <option key={villageName} value={villageName}>
+                      {villageName}, {meta.district} ({stateAbbrMap[meta.state] || meta.state})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {/* Layer Tabs */}
             <div className="flex items-center gap-1 bg-[#EBE7DF] p-1 rounded-lg border border-[#DCD7CE] text-xs">
@@ -263,55 +348,96 @@ export const CadastralGisView: React.FC<CadastralGisViewProps> = ({
           </div>
         </div>
 
-        {/* Quick Village Pill Switcher Bar */}
-        <div className="pt-2 border-t border-[#DCD7CE] flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full">
-            <span className="text-[#6B6B58] text-[11px] font-bold uppercase tracking-wider whitespace-nowrap mr-1">
-              Select Village:
-            </span>
-            {Object.entries(VILLAGE_CENTERS).map(([villageName, meta]) => {
-              const isSelected = villageName === activeVillage;
-              const villagePlotCount = CADASTRAL_PLOTS.filter((p) => p.village === villageName).length;
-              const stateAbbr = stateAbbrMap[meta.state] || meta.state.slice(0, 2).toUpperCase();
+        {/* Quick Village Pill Switcher Bar / Citizen Land Scope Bar */}
+        {isCitizen ? (
+          <div className="pt-2 border-t border-[#DCD7CE] flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2 overflow-x-auto pb-1">
+              <span className="text-[#5A5A40] text-[11px] font-bold uppercase tracking-wider whitespace-nowrap mr-1">
+                Your Land View:
+              </span>
+              <button
+                id="btn-citizen-scope-my-land"
+                onClick={() => {
+                  setCitizenLandScope('MY_LAND_ONLY');
+                  setSelectedPlotKhasra(citizenKhasra);
+                }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap border ${
+                  citizenLandScope === 'MY_LAND_ONLY'
+                    ? 'bg-[#5A5A40] text-[#FFF9EA] border-[#43432F] shadow-2xs'
+                    : 'bg-[#F5F3EE] text-[#4A3728] border-[#DCD7CE] hover:bg-[#EBE7DF]'
+                }`}
+              >
+                <span>⭐ Only My Land Parcel (Khasra #{citizenKhasra})</span>
+              </button>
+              <button
+                id="btn-citizen-scope-village"
+                onClick={() => setCitizenLandScope('MY_VILLAGE')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap border ${
+                  citizenLandScope === 'MY_VILLAGE'
+                    ? 'bg-[#5A5A40] text-[#FFF9EA] border-[#43432F] shadow-2xs'
+                    : 'bg-[#F5F3EE] text-[#4A3728] border-[#DCD7CE] hover:bg-[#EBE7DF]'
+                }`}
+              >
+                <span>Village {citizenVillage} Sheet (Contiguous Parcels)</span>
+              </button>
+            </div>
 
-              return (
-                <button
-                  key={villageName}
-                  id={`btn-village-pill-${villageName.toLowerCase()}`}
-                  onClick={() => handleVillageChange(villageName)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap border ${
-                    isSelected
-                      ? 'bg-[#5A5A40] text-[#FFF9EA] border-[#43432F] shadow-2xs'
-                      : 'bg-[#F5F3EE] text-[#4A3728] border-[#DCD7CE] hover:bg-[#EBE7DF]'
-                  }`}
-                >
-                  <span className={`px-1 py-0.2 rounded text-[9px] font-bold ${
-                    isSelected ? 'bg-[#FFF9EA]/20 text-[#FFF9EA]' : 'bg-[#EBE7DF] text-[#5A5A40]'
-                  }`}>
-                    {stateAbbr}
-                  </span>
-                  <span>{villageName}</span>
-                  <span className={`text-[10px] ${isSelected ? 'text-[#E5C37A]' : 'text-[#6B6B58]'}`}>
-                    ({villagePlotCount})
-                  </span>
-                </button>
-              );
-            })}
+            <div className="flex items-center gap-2 text-xs text-[#5A5A40] bg-[#FAF8F5] px-3 py-1 rounded-lg border border-[#DCD7CE]">
+              <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse"></span>
+              <span className="font-semibold">Private Citizen Access:</span>
+              <span>Showing only your registered land in {citizenVillage}. Other villages restricted.</span>
+            </div>
           </div>
+        ) : (
+          <div className="pt-2 border-t border-[#DCD7CE] flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full">
+              <span className="text-[#6B6B58] text-[11px] font-bold uppercase tracking-wider whitespace-nowrap mr-1">
+                Select Village:
+              </span>
+              {Object.entries(VILLAGE_CENTERS).map(([villageName, meta]) => {
+                const isSelected = villageName === activeVillage;
+                const villagePlotCount = CADASTRAL_PLOTS.filter((p) => p.village === villageName).length;
+                const stateAbbr = stateAbbrMap[meta.state] || meta.state.slice(0, 2).toUpperCase();
 
-          {/* Quick Village Overview Tag */}
-          <div className="flex items-center gap-3 text-xs text-[#6B6B58] bg-[#F5F3EE] px-3 py-1 rounded-lg border border-[#DCD7CE]">
-            <span><strong>{currentVillageCenter.district}</strong> District, {currentVillageCenter.state}</span>
-            <span>&bull;</span>
-            <span><strong>{plotsInVillage.length}</strong> Khasra Plots ({totalHa} Ha)</span>
-            {litigatedCount > 0 && (
-              <>
-                <span>&bull;</span>
-                <span className="text-[#8B0000] font-semibold">{litigatedCount} Litigated</span>
-              </>
-            )}
+                return (
+                  <button
+                    key={villageName}
+                    id={`btn-village-pill-${villageName.toLowerCase()}`}
+                    onClick={() => handleVillageChange(villageName)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap border ${
+                      isSelected
+                        ? 'bg-[#5A5A40] text-[#FFF9EA] border-[#43432F] shadow-2xs'
+                        : 'bg-[#F5F3EE] text-[#4A3728] border-[#DCD7CE] hover:bg-[#EBE7DF]'
+                    }`}
+                  >
+                    <span className={`px-1 py-0.2 rounded text-[9px] font-bold ${
+                      isSelected ? 'bg-[#FFF9EA]/20 text-[#FFF9EA]' : 'bg-[#EBE7DF] text-[#5A5A40]'
+                    }`}>
+                      {stateAbbr}
+                    </span>
+                    <span>{villageName}</span>
+                    <span className={`text-[10px] ${isSelected ? 'text-[#E5C37A]' : 'text-[#6B6B58]'}`}>
+                      ({villagePlotCount})
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Quick Village Overview Tag */}
+            <div className="flex items-center gap-3 text-xs text-[#6B6B58] bg-[#F5F3EE] px-3 py-1 rounded-lg border border-[#DCD7CE]">
+              <span><strong>{currentVillageCenter.district}</strong> District, {currentVillageCenter.state}</span>
+              <span>&bull;</span>
+              <span><strong>{plotsInVillage.length}</strong> Khasra Plots ({totalHa} Ha)</span>
+              {litigatedCount > 0 && (
+                <>
+                  <span>&bull;</span>
+                  <span className="text-[#8B0000] font-semibold">{litigatedCount} Litigated</span>
+                </>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* MODE 1: SPLIT-SCREEN COMPARISON VIEW (Record Details Left 50% ↔ Spatial Map Right 50%) */}
@@ -333,6 +459,8 @@ export const CadastralGisView: React.FC<CadastralGisViewProps> = ({
               allRecords={records}
               onSelectRecord={onSelectRecord}
               onNavigateToVerification={onNavigateToVerification}
+              userRole={userRole}
+              onScheduleWithGisOfficer={onNavigateToFeedbackSchedule}
               onSelectPlotByKhasra={(khasra) => {
                 const targetPlot = CADASTRAL_PLOTS.find(p => p.khasra === khasra && p.village === activeVillage)
                                 || CADASTRAL_PLOTS.find(p => p.khasra === khasra);
@@ -467,7 +595,7 @@ export const CadastralGisView: React.FC<CadastralGisViewProps> = ({
             <div className="pt-2 flex flex-wrap items-center justify-between gap-2 border-t border-[#DCD7CE]">
               <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
                 <span className="text-[#6B6B58] font-bold text-[11px] whitespace-nowrap">
-                  Village Parcels:
+                  {isCitizen ? 'Your Registered Parcels:' : 'Village Parcels:'}
                 </span>
                 {availablePlots.map((plot) => (
                   <button
@@ -482,7 +610,10 @@ export const CadastralGisView: React.FC<CadastralGisViewProps> = ({
                         : 'bg-[#F5F3EE] text-[#4A3728] border-[#DCD7CE] hover:bg-[#EBE7DF]'
                     }`}
                   >
-                    Khasra {plot.khasra} {plot.status === 'LITIGATION' && '⚠️'}
+                    {isCitizen && plot.khasra === citizenKhasra ? '⭐ ' : ''}
+                    Khasra {plot.khasra}
+                    {isCitizen && plot.khasra === citizenKhasra ? ' (Your Land)' : ''}
+                    {plot.status === 'LITIGATION' && ' ⚠️'}
                   </button>
                 ))}
               </div>
@@ -588,7 +719,7 @@ export const CadastralGisView: React.FC<CadastralGisViewProps> = ({
             <div className="pt-2 flex items-center justify-between gap-2">
               <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
                 <span className="text-[#6B6B58] font-bold text-[11px] whitespace-nowrap">
-                  Plots in {activeVillage}:
+                  {isCitizen ? 'Your Registered Parcels:' : `Plots in ${activeVillage}:`}
                 </span>
                 {availablePlots.map((plot) => (
                   <button
@@ -603,7 +734,10 @@ export const CadastralGisView: React.FC<CadastralGisViewProps> = ({
                         : 'bg-[#F5F3EE] text-[#4A3728] border-[#DCD7CE] hover:bg-[#EBE7DF]'
                     }`}
                   >
-                    Khasra {plot.khasra} {plot.status === 'LITIGATION' && '⚠️'}
+                    {isCitizen && plot.khasra === citizenKhasra ? '⭐ ' : ''}
+                    Khasra {plot.khasra}
+                    {isCitizen && plot.khasra === citizenKhasra ? ' (Your Land)' : ''}
+                    {plot.status === 'LITIGATION' && ' ⚠️'}
                   </button>
                 ))}
               </div>
@@ -680,7 +814,7 @@ export const CadastralGisView: React.FC<CadastralGisViewProps> = ({
                   </div>
                 </div>
 
-                <div className="pt-2">
+                <div className="pt-2 space-y-2">
                   <button
                     id="btn-switch-to-split"
                     onClick={() => setViewMode('split')}
@@ -689,6 +823,17 @@ export const CadastralGisView: React.FC<CadastralGisViewProps> = ({
                     <Columns className="w-3.5 h-3.5" />
                     <span>Compare with Digitized RoR (Split-Screen)</span>
                   </button>
+
+                  {userRole === 'CITIZEN_VIEWER' && onNavigateToFeedbackSchedule && (
+                    <button
+                      id="btn-inspector-citizen-schedule"
+                      onClick={() => onNavigateToFeedbackSchedule(currentPlot.khasra, currentPlot.village)}
+                      className="w-full py-2 px-3 rounded-lg bg-[#FFF9EA] hover:bg-[#F5F0E1] border border-[#DCD7CE] text-[#8B4513] font-bold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+                    >
+                      <Calendar className="w-3.5 h-3.5" />
+                      <span>Schedule Consultation for Khasra #{currentPlot.khasra}</span>
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

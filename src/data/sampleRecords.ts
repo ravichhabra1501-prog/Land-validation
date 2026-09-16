@@ -191,6 +191,50 @@ export const INITIAL_LAND_RECORDS: ExtractedLandRecord[] = [
         action: 'Ingested & Extracted',
         notes: 'Pre-processed via OpenCV Sauvola filter; OCR extraction completed with 2 low-confidence flags.'
       }
+    ],
+
+    changeLog: [
+      {
+        id: 'CL-001-MH',
+        timestamp: '2026-09-02T11:20:00Z',
+        officerName: 'Patwari Rajesh Kumar Sharma',
+        role: 'VERIFICATION_SPECIALIST',
+        action: 'FIELD_CORRECTION',
+        fieldKey: 'khasraNumber',
+        fieldLabel: 'Khasra / Gat Number',
+        oldValue: '142/2',
+        newValue: '142/1',
+        reason: 'Parchment ink bleed caused initial OCR to recognize Gat as 142/2; rectified to 142/1 following 1984 Bandobast register index.',
+        remarks: 'Physical deed corroborated at Haveli Tehsil record room archive.',
+        sourceTerminal: 'Haveli Saza Workstation #01'
+      },
+      {
+        id: 'CL-002-MH',
+        timestamp: '2026-08-30T16:45:00Z',
+        officerName: 'Patwari Rajesh Kumar Sharma',
+        role: 'VERIFICATION_SPECIALIST',
+        action: 'ENCUMBRANCE_UPDATE',
+        fieldKey: 'encumbranceStatus',
+        fieldLabel: 'Encumbrance / Lien Annotation',
+        oldValue: 'CLEAR',
+        newValue: 'MORTGAGED',
+        reason: 'Handwritten pencil annotation verified with Bank of Maharashtra Wagholi branch loan hypothecation.',
+        remarks: 'Recorded agricultural loan lien of INR 2,50,000/- dated 12/03/2019.',
+        sourceTerminal: 'Haveli Saza Workstation #01'
+      },
+      {
+        id: 'CL-003-MH',
+        timestamp: '2026-08-28T14:32:00Z',
+        officerName: 'AI OCR Pipeline v3.8',
+        role: 'SYSTEM',
+        action: 'INITIAL_INGESTION',
+        fieldLabel: 'Saat-Baara 7/12 Parchment Ingestion',
+        oldValue: 'Physical Scan (Wagholi_Gat142_SaatBaara_Scan1984.pdf)',
+        newValue: 'Structured Land Administration Data Dictionary',
+        reason: 'Automated OpenCV Sauvola adaptive binarization & Indic OCR',
+        remarks: '2 handwritten fields flagged for mandatory human-in-the-loop review.',
+        sourceTerminal: 'DILRMP Central Scanning Node #04'
+      }
     ]
   },
   {
@@ -364,6 +408,50 @@ export const INITIAL_LAND_RECORDS: ExtractedLandRecord[] = [
         role: 'REVENUE_OFFICER',
         action: 'Sanctioned & Digitized',
         notes: 'Digitally signed with DSC token #GOI-UP-VAR-9942'
+      }
+    ],
+
+    changeLog: [
+      {
+        id: 'CL-001-UP',
+        timestamp: '2026-08-31T11:40:00Z',
+        officerName: 'SDM Alok Srivastava',
+        role: 'REVENUE_OFFICER',
+        action: 'SANCTION_APPROVAL',
+        fieldLabel: 'Statutory Land Record Sanction',
+        oldValue: 'NEEDS_REVIEW',
+        newValue: 'VERIFIED_AND_SANCTIONED',
+        reason: 'Sub-Divisional Magistrate formal sanction under Section 143 UP Revenue Code',
+        remarks: 'All khasra dimensions cross-verified with Babatpur revenue village shajra.',
+        digitalSignature: 'DSC-UP-VAR-PIN-2026-881A',
+        sourceTerminal: 'Pindra Tehsil SDM Court Portal'
+      },
+      {
+        id: 'CL-002-UP',
+        timestamp: '2026-08-30T14:30:00Z',
+        officerName: 'Lekhpal Rajeshwar Yadav',
+        role: 'VERIFICATION_SPECIALIST',
+        action: 'FIELD_CORRECTION',
+        fieldKey: 'totalAreaDeclared',
+        fieldLabel: 'Total Declared Area',
+        oldValue: '0.850',
+        newValue: '0.890',
+        reason: 'Corrected boundary survey area discrepancy from Nakal Jamabandi cross-reference.',
+        remarks: 'Confirmed against Khasra Map sheet 04 parcel #512.',
+        sourceTerminal: 'Pindra Halka Workstation'
+      },
+      {
+        id: 'CL-003-UP',
+        timestamp: '2026-08-30T10:15:00Z',
+        officerName: 'AI OCR Pipeline v3.8',
+        role: 'SYSTEM',
+        action: 'INITIAL_INGESTION',
+        fieldLabel: 'Khasra-Khatauni Parchment Ingestion',
+        oldValue: 'Babatpur_Khasra512_KhatauniExtract.pdf',
+        newValue: 'Structured UP Revenue Registry',
+        reason: 'Document digitized with 96.8% optical confidence',
+        remarks: 'Direct high-fidelity scan extracted with all boundary coordinates.',
+        sourceTerminal: 'Varanasi Division OCR Ingestion Server'
       }
     ]
   },

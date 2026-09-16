@@ -1,0 +1,47 @@
+{
+  "entities": {
+    "LandRecord": {
+      "title": "LandRecord",
+      "description": "Digitized statutory land record parcel conforming to DILRMP / ISO 19152 LADM standards",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique land record identifier" },
+        "documentNumber": { "type": "string", "description": "Administrative document or mutation index" },
+        "documentType": { "type": "string", "description": "Document classification such as 7_12_EXTRACT, KHASRA_KHATAUNI, etc." },
+        "status": { "type": "string", "description": "Verification status (e.g. NEEDS_REVIEW, VERIFIED_AND_SANCTIONED)" },
+        "overallConfidence": { "type": "number", "description": "AI OCR extraction confidence score (0-100)" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Ingestion ISO timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Last update ISO timestamp" }
+      },
+      "required": ["id", "documentNumber", "status"]
+    },
+    "CitizenAppointment": {
+      "title": "CitizenAppointment",
+      "description": "Citizen land inquiry, boundary grievance or scheduled GIS officer consultation",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique consultation or grievance tracking ID" },
+        "citizenName": { "type": "string", "description": "Name of citizen landowner" },
+        "citizenEmail": { "type": "string", "description": "Contact email" },
+        "citizenMobile": { "type": "string", "description": "Contact phone number" },
+        "khasraNumber": { "type": "string", "description": "Subject Khasra or Gat number" },
+        "village": { "type": "string", "description": "Subject village" },
+        "inquiryType": { "type": "string", "description": "Category of inquiry or consultation" },
+        "description": { "type": "string", "description": "Detailed grievance or survey request" },
+        "status": { "type": "string", "description": "Processing status (REQUESTED, CONFIRMED, COMPLETED, CANCELLED)" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Booking timestamp" }
+      },
+      "required": ["id", "citizenName", "inquiryType", "status"]
+    }
+  },
+  "firestore": {
+    "/land_records/{recordId}": {
+      "schema": { "$ref": "#/entities/LandRecord" },
+      "description": "Statutory digitized land revenue records"
+    },
+    "/citizen_appointments/{appointmentId}": {
+      "schema": { "$ref": "#/entities/CitizenAppointment" },
+      "description": "Citizen grievances and GIS officer scheduled consultations"
+    }
+  }
+}

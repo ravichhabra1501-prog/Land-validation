@@ -46,12 +46,14 @@ export const PRESET_OFFICER_PERSONAS: Record<UserRole, AuthUser> = {
     email: 'vikram.singh@gmail.com',
     role: 'CITIZEN_VIEWER',
     designation: 'Registered Agricultural Landowner (Khatedar)',
-    jurisdiction: 'Village Madhopur & Rampur, Tehsil Sadar',
+    jurisdiction: 'Village Wagholi (Gat / Khasra #142/1), Haveli Tehsil, Pune',
     terminalId: 'CIT-WEB-PORTAL-771',
     loginTimestamp: new Date().toISOString(),
     avatarInitials: 'VD',
     badgeNumber: 'AADHAAR-VERIFIED-771',
-    digitalTokenId: 'UIDAI-KYC-AUTH-2026'
+    digitalTokenId: 'UIDAI-KYC-AUTH-2026',
+    assignedVillage: 'Wagholi',
+    assignedKhasra: '142/1'
   }
 };
 

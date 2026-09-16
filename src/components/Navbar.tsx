@@ -8,42 +8,42 @@ import {
   Map as MapIcon, 
   Globe2, 
   UserCheck, 
-  Sparkles,
-  Layers,
-  ChevronDown,
-  LogOut,
-  AlertTriangle,
-  X,
-  Lock,
-  Clock,
-  Terminal
+  Layers, 
+  LogOut, 
+  AlertTriangle, 
+  X, 
+  Terminal, 
+  Calendar 
 } from 'lucide-react';
 import { UserRole, IndicLanguage, AuthUser } from '../types';
+import { getTranslations, setStoredLanguage } from '../utils/translations';
 
 interface NavbarProps {
-  currentTab: 'dashboard' | 'ingestion' | 'verification' | 'rules' | 'gis';
-  setCurrentTab: (tab: 'dashboard' | 'ingestion' | 'verification' | 'rules' | 'gis') => void;
+  currentTab: 'dashboard' | 'ingestion' | 'verification' | 'rules' | 'gis' | 'citizen_feedback';
+  setCurrentTab: (tab: 'dashboard' | 'ingestion' | 'verification' | 'rules' | 'gis' | 'citizen_feedback') => void;
   userRole: UserRole;
-  setUserRole: (role: UserRole) => void;
   selectedLanguage: IndicLanguage;
   setSelectedLanguage: (lang: IndicLanguage) => void;
   pendingReviewCount: number;
   currentUser?: AuthUser | null;
   onLogout: () => void;
+  citizenAppointmentCount?: number;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   currentTab,
   setCurrentTab,
   userRole,
-  setUserRole,
   selectedLanguage,
   setSelectedLanguage,
   pendingReviewCount,
   currentUser,
-  onLogout
+  onLogout,
+  citizenAppointmentCount = 0
 }) => {
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState<boolean>(false);
+  const t = getTranslations(selectedLanguage);
+
   const languageLabels: Record<IndicLanguage, { native: string; english: string }> = {
     english: { native: 'English', english: 'English' },
     hindi: { native: 'हिन्दी', english: 'Hindi' },
@@ -57,13 +57,41 @@ export const Navbar: React.FC<NavbarProps> = ({
     urdu: { native: 'اردو', english: 'Urdu' }
   };
 
-  const navTabs = [
-    { id: 'dashboard' as const, label: 'Modernization Dashboard', icon: Building2 },
-    { id: 'ingestion' as const, label: 'Ingestion & OCR', icon: FileText },
-    { id: 'verification' as const, label: 'Verification Station (HITL)', icon: CheckCircle2, count: pendingReviewCount },
-    { id: 'rules' as const, label: 'Validation Engine', icon: ShieldCheck },
-    { id: 'gis' as const, label: 'Cadastral GIS (भू-नक्शा)', icon: MapIcon }
-  ];
+  const handleLanguageChange = (lang: IndicLanguage) => {
+    setSelectedLanguage(lang);
+    setStoredLanguage(lang);
+  };
+
+  // Tabs dynamically translated according to selectedLanguage
+  const navTabs = userRole === 'CITIZEN_VIEWER'
+    ? [
+        { id: 'gis' as const, label: t.tabCitizenLandMap, icon: MapIcon },
+        { 
+          id: 'citizen_feedback' as const, 
+          label: t.tabCitizenConsultation, 
+          icon: Calendar, 
+          count: citizenAppointmentCount 
+        }
+      ]
+    : [
+        { id: 'dashboard' as const, label: t.tabDashboard, icon: Building2 },
+        { id: 'ingestion' as const, label: t.tabIngestion, icon: FileText },
+        { id: 'verification' as const, label: t.tabVerification, icon: CheckCircle2, count: pendingReviewCount },
+        { id: 'rules' as const, label: t.tabRules, icon: ShieldCheck },
+        { id: 'gis' as const, label: t.tabGis, icon: MapIcon },
+        { 
+          id: 'citizen_feedback' as const, 
+          label: t.tabCitizenFeedback, 
+          icon: Calendar, 
+          count: citizenAppointmentCount 
+        }
+      ];
+
+  const roleLabel = 
+    userRole === 'REVENUE_OFFICER' ? t.roleRevenueOfficer :
+    userRole === 'VERIFICATION_SPECIALIST' ? t.roleVerificationSpecialist :
+    userRole === 'SETTLEMENT_OFFICER' ? t.roleSettlementOfficer :
+    t.roleCitizenViewer;
 
   return (
     <header className="sticky top-0 z-50 bg-[#FAF8F5]/90 backdrop-blur-xl border-b border-[#DCD7CE]/80 shadow-xs transition-all">
@@ -75,7 +103,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             whileHover={{ scale: 1.01 }}
             whileTap={{ scale: 0.99 }}
             className="flex items-center gap-3 cursor-pointer group" 
-            onClick={() => setCurrentTab('dashboard')}
+            onClick={() => setCurrentTab(userRole === 'CITIZEN_VIEWER' ? 'gis' : 'dashboard')}
           >
             <div className="relative w-10 h-10 rounded-xl bg-gradient-to-br from-[#5A5A40] via-[#4A4A33] to-[#363625] flex items-center justify-center text-[#FFF9EA] shadow-xs border border-[#707052]/50 group-hover:shadow-md transition-shadow">
               <Layers className="w-5 h-5 text-[#EBE7DF]" />
@@ -84,19 +112,19 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-base sm:text-lg font-bold tracking-tight text-[#33332A] natural-serif leading-tight">
-                  BhumiRecord AI
+                  {t.appName}
                 </h1>
                 <span className="bg-[#FFF9EA] text-[#8B4513] text-[10px] font-semibold px-2 py-0.5 rounded-full border border-[#DCD7CE] uppercase tracking-wide">
-                  DILRMP v3.8
+                  {t.versionBadge}
                 </span>
               </div>
               <p className="text-[11px] text-[#5A5A40] font-medium leading-none mt-0.5">
-                Intelligent Land Record Digitization &amp; Validation Portal
+                {t.appSubtitle}
               </p>
             </div>
           </motion.div>
 
-          {/* Controls: Language, Role Switchers & Profile */}
+          {/* Controls: Language Selector, Authenticated Role Badge & Profile */}
           <div className="flex items-center gap-2 sm:gap-3">
             {/* Language Selector */}
             <motion.div 
@@ -108,7 +136,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <select
                   aria-label="Select portal language"
                   value={selectedLanguage}
-                  onChange={(e) => setSelectedLanguage(e.target.value as IndicLanguage)}
+                  onChange={(e) => handleLanguageChange(e.target.value as IndicLanguage)}
                   className="bg-transparent border-none outline-hidden cursor-pointer pr-1 font-medium text-[#33332A]"
                 >
                   {Object.entries(languageLabels).map(([key, lang]) => (
@@ -120,26 +148,18 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
             </motion.div>
 
-            {/* Role Switcher */}
-            <motion.div 
-              whileHover={{ y: -1 }}
-              className="relative inline-block text-left"
+            {/* Authenticated Role Status Badge (Read-Only, no quick role changing) */}
+            <div 
+              className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FAF8F5] border border-[#DCD7CE] text-xs shadow-2xs"
+              title={`${t.currentRoleLabel}: ${roleLabel}`}
             >
-              <div className="flex items-center gap-1.5 bg-[#EBE7DF]/80 hover:bg-[#E2DDD3] px-3 py-1.5 rounded-xl border border-[#DCD7CE] text-xs font-medium text-[#33332A] transition-colors shadow-2xs">
-                <UserCheck className="w-3.5 h-3.5 text-[#8B4513]" />
-                <select
-                  aria-label="Select administrative role"
-                  value={userRole}
-                  onChange={(e) => setUserRole(e.target.value as UserRole)}
-                  className="bg-transparent border-none outline-hidden cursor-pointer pr-1 font-medium text-[#33332A]"
-                >
-                  <option value="REVENUE_OFFICER" className="bg-[#FAF8F5] text-[#33332A]">Tehsildar / SDM (Sanction)</option>
-                  <option value="VERIFICATION_SPECIALIST" className="bg-[#FAF8F5] text-[#33332A]">Patwari / Lekhpal (Verifier)</option>
-                  <option value="SETTLEMENT_OFFICER" className="bg-[#FAF8F5] text-[#33332A]">Settlement Officer (Cadastral)</option>
-                  <option value="CITIZEN_VIEWER" className="bg-[#FAF8F5] text-[#33332A]">Citizen (Public Record View)</option>
-                </select>
+              <UserCheck className="w-3.5 h-3.5 text-[#8B4513] shrink-0" />
+              <div className="text-left leading-tight">
+                <span className="font-semibold text-[#4A3728] max-w-[160px] truncate block">
+                  {roleLabel}
+                </span>
               </div>
-            </motion.div>
+            </div>
 
             {/* Current Officer / User Profile Badge */}
             {currentUser && (
@@ -168,7 +188,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               title="Log out and exit from revenue portal"
             >
               <LogOut className="w-3.5 h-3.5 text-[#8B0000] group-hover:-translate-x-0.5 transition-transform" />
-              <span className="hidden sm:inline">Logout</span>
+              <span className="hidden sm:inline">{t.logout}</span>
             </motion.button>
           </div>
         </div>
@@ -248,10 +268,10 @@ export const Navbar: React.FC<NavbarProps> = ({
 
               <div className="space-y-1">
                 <h3 id="logout-dialog-title" className="text-base font-bold text-[#33332A] natural-serif">
-                  Confirm Exit from Revenue Portal
+                  {t.logoutConfirmTitle}
                 </h3>
                 <p className="text-xs text-[#5A5A40] leading-relaxed">
-                  You are about to terminate your active administrative session and disconnect from the Digital India Land Records Modernization network.
+                  {t.logoutConfirmDesc}
                 </p>
               </div>
 
@@ -288,7 +308,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   onClick={() => setIsLogoutConfirmOpen(false)}
                   className="px-4 py-2 rounded-xl border border-[#DCD7CE] bg-[#EBE7DF] hover:bg-[#E2DDD3] text-xs font-semibold text-[#33332A] cursor-pointer transition-colors shadow-2xs"
                 >
-                  Stay Signed In
+                  {t.cancel}
                 </button>
                 <button
                   id="btn-confirm-logout"
@@ -300,7 +320,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   className="px-4 py-2 rounded-xl bg-[#8B0000] hover:bg-[#6D0000] text-[#FFF9EA] text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors"
                 >
                   <LogOut className="w-3.5 h-3.5" />
-                  <span>Log Out &amp; Exit</span>
+                  <span>{t.confirmLogout}</span>
                 </button>
               </div>
             </motion.div>
