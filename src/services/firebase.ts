@@ -43,6 +43,52 @@ export async function testFirestoreConnection(): Promise<boolean> {
 }
 
 /**
+ * Sanitize an object for Firestore:
+ * 1. Strips or converts undefined values to null
+ * 2. Converts nested arrays (like [[lat, lng], ...]) into arrays of objects to satisfy Firestore constraint
+ */
+export function sanitizeForFirestore(obj: any): any {
+  if (obj === undefined) {
+    return null;
+  }
+  if (obj === null || typeof obj !== 'object') {
+    return obj;
+  }
+  if (Array.isArray(obj)) {
+    // If array of arrays (e.g. cadastralPolygon: [[lng, lat], ...])
+    if (obj.length > 0 && Array.isArray(obj[0])) {
+      return obj.map((subArr) => {
+        if (Array.isArray(subArr)) {
+          return { lng: subArr[0] ?? 0, lat: subArr[1] ?? 0 };
+        }
+        return sanitizeForFirestore(subArr);
+      });
+    }
+    return obj.map((item) => sanitizeForFirestore(item));
+  }
+
+  const result: Record<string, any> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value !== undefined) {
+      result[key] = sanitizeForFirestore(value);
+    }
+  }
+  return result;
+}
+
+/**
+ * Normalizes loaded records from Firestore, reconstructing polygon arrays if needed
+ */
+export function normalizeLoadedRecord(record: any): ExtractedLandRecord {
+  if (record && Array.isArray(record.cadastralPolygon) && record.cadastralPolygon.length > 0) {
+    if (typeof record.cadastralPolygon[0] === 'object' && !Array.isArray(record.cadastralPolygon[0])) {
+      record.cadastralPolygon = record.cadastralPolygon.map((p: any) => [p.lng ?? 0, p.lat ?? 0]);
+    }
+  }
+  return record as ExtractedLandRecord;
+}
+
+/**
  * Seed initial land records into Firestore if collection is empty
  */
 export async function seedInitialRecordsIfEmpty(): Promise<void> {
@@ -52,7 +98,7 @@ export async function seedInitialRecordsIfEmpty(): Promise<void> {
     if (snapshot.empty) {
       console.info('Seeding initial land records to Firestore...');
       for (const record of INITIAL_LAND_RECORDS) {
-        await setDoc(doc(db, LAND_RECORDS_COLLECTION, record.id), record);
+        await setDoc(doc(db, LAND_RECORDS_COLLECTION, record.id), sanitizeForFirestore(record));
       }
       console.info('Initial land records seeded.');
     }
@@ -92,11 +138,39 @@ export function subscribeToLandRecords(
     colRef,
     (snapshot) => {
       if (!snapshot.empty) {
-        const records: ExtractedLandRecord[] = [];
+        const firestoreRecords: ExtractedLandRecord[] = [];
         snapshot.forEach((d) => {
-          records.push(d.data() as ExtractedLandRecord);
+          firestoreRecords.push(normalizeLoadedRecord(d.data()));
         });
-        onRecordsUpdated(records);
+
+        // Merge Firestore records with INITIAL_LAND_RECORDS to ensure all state data is always present
+        const firestoreMap = new Map<string, ExtractedLandRecord>(firestoreRecords.map(r => [r.id, r]));
+        const missingInFirestore: ExtractedLandRecord[] = [];
+
+        const mergedRecords: ExtractedLandRecord[] = INITIAL_LAND_RECORDS.map(initRec => {
+          if (firestoreMap.has(initRec.id)) {
+            const fsRec = firestoreMap.get(initRec.id)!;
+            firestoreMap.delete(initRec.id);
+            return fsRec;
+          } else {
+            missingInFirestore.push(initRec);
+            return initRec;
+          }
+        });
+
+        // Add any additional records created directly in Firestore (like user uploads)
+        firestoreMap.forEach(fsRec => {
+          mergedRecords.push(fsRec);
+        });
+
+        onRecordsUpdated(mergedRecords);
+
+        // Lazily sync missing initial records to Firestore in background
+        if (missingInFirestore.length > 0) {
+          saveBatchLandRecordsToFirestore(missingInFirestore).catch(e => {
+            console.warn('Background sync of new initial records to Firestore:', e);
+          });
+        }
       } else {
         // If empty, trigger seeding
         seedInitialRecordsIfEmpty().then(() => {
@@ -117,7 +191,7 @@ export function subscribeToLandRecords(
 export async function saveLandRecordToFirestore(record: ExtractedLandRecord): Promise<void> {
   try {
     const docRef = doc(db, LAND_RECORDS_COLLECTION, record.id);
-    await setDoc(docRef, record, { merge: true });
+    await setDoc(docRef, sanitizeForFirestore(record), { merge: true });
   } catch (err) {
     console.error('Error saving land record to Firestore:', err);
     throw err;
@@ -131,7 +205,7 @@ export async function saveBatchLandRecordsToFirestore(records: ExtractedLandReco
   try {
     const promises = records.map((record) => {
       const docRef = doc(db, LAND_RECORDS_COLLECTION, record.id);
-      return setDoc(docRef, record, { merge: true });
+      return setDoc(docRef, sanitizeForFirestore(record), { merge: true });
     });
     await Promise.all(promises);
   } catch (err) {

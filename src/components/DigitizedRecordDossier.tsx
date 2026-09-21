@@ -26,9 +26,15 @@ import {
 } from 'lucide-react';
 import { ExtractedLandRecord, UserRole } from '../types';
 import { CadastralPlot } from '../data/cadastralPlotsData';
-import { calculateBoundarySegments, calculatePerimeterMeters } from '../utils/cadastralUtils';
+import { 
+  calculateBoundarySegments, 
+  calculatePerimeterMeters,
+  calculateLandScheduleDimensions,
+  LandScheduleDimensions
+} from '../utils/cadastralUtils';
 
 interface DigitizedRecordDossierProps {
+
   record: ExtractedLandRecord;
   selectedPlot: CadastralPlot;
   allRecords: ExtractedLandRecord[];
@@ -58,6 +64,7 @@ export const DigitizedRecordDossier: React.FC<DigitizedRecordDossierProps> = ({
   // Derive spatial segments from current plot
   const boundarySegments = calculateBoundarySegments(selectedPlot.coordinates);
   const totalPerimeterMeters = calculatePerimeterMeters(selectedPlot.coordinates);
+  const scheduleDimensions = calculateLandScheduleDimensions(selectedPlot.coordinates);
 
   // Check identifier concordance
   const isKhasraMatch = record.khasraNumber.value.trim() === selectedPlot.khasra.trim();
@@ -410,6 +417,23 @@ export const DigitizedRecordDossier: React.FC<DigitizedRecordDossierProps> = ({
                   </tr>
 
                   <tr>
+                    <td className="p-2.5 font-semibold text-[#5A5A40]">Land Schedule (L × W)</td>
+                    <td className="p-2.5 text-[#33332A]">
+                      <span className="font-medium text-xs">Written Chauhaddi (4 Bounds)</span>
+                      <span className="text-[10px] text-[#6B6B58] block mt-0.5">North, South, East, West Boundaries</span>
+                    </td>
+                    <td className="p-2.5 text-[#33332A]">
+                      <span className="font-mono font-bold text-xs">{scheduleDimensions.dimensionsMetric}</span>
+                      <span className="text-[10px] text-[#5A5A40] block mt-0.5 font-mono">
+                        L: {scheduleDimensions.lengthMeters}m &bull; W: {scheduleDimensions.widthMeters}m ({scheduleDimensions.shapeClassification})
+                      </span>
+                    </td>
+                    <td className="p-2.5 text-center">
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#EAF2EB] text-[#3D5A40]">Concordant</span>
+                    </td>
+                  </tr>
+
+                  <tr>
                     <td className="p-2.5 font-semibold text-[#5A5A40]">Soil / Land Class</td>
                     <td className="p-2.5 text-[#33332A]">{record.landClassification.value}</td>
                     <td className="p-2.5 text-[#33332A]">{selectedPlot.soil}</td>
@@ -518,8 +542,56 @@ export const DigitizedRecordDossier: React.FC<DigitizedRecordDossierProps> = ({
               </div>
             </div>
 
+            {/* Land Schedule Dimensions Hero Card (Length & Width) */}
+            <div className="p-3.5 rounded-xl bg-[#FAF8F5] border border-[#DCD7CE] space-y-2.5 shadow-2xs">
+              <div className="flex items-center justify-between pb-2 border-b border-[#DCD7CE]">
+                <div className="flex items-center gap-2">
+                  <Ruler className="w-4 h-4 text-[#5A5A40]" />
+                  <span className="font-bold text-[#33332A] natural-serif text-sm">
+                    Land Schedule Dimensions (तफ़सील पैमाइश: लंबाई व चौड़ाई)
+                  </span>
+                </div>
+                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">
+                  All Roles Access
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <div className="p-2.5 rounded-lg bg-[#F5F3EE] border border-[#DCD7CE]">
+                  <span className="text-[#5A5A40] text-[10px] uppercase font-bold tracking-wider block">Length (लंबाई - N↔S)</span>
+                  <div className="font-mono font-bold text-sm text-[#33332A] mt-0.5">
+                    {scheduleDimensions.lengthMeters} meters
+                  </div>
+                  <span className="text-[10px] text-[#6B6B58] block mt-0.5">
+                    {scheduleDimensions.lengthFeet} ft &bull; {scheduleDimensions.lengthGatta} Gatta
+                  </span>
+                </div>
+
+                <div className="p-2.5 rounded-lg bg-[#F5F3EE] border border-[#DCD7CE]">
+                  <span className="text-[#5A5A40] text-[10px] uppercase font-bold tracking-wider block">Width (चौड़ाई - E↔W)</span>
+                  <div className="font-mono font-bold text-sm text-[#33332A] mt-0.5">
+                    {scheduleDimensions.widthMeters} meters
+                  </div>
+                  <span className="text-[10px] text-[#6B6B58] block mt-0.5">
+                    {scheduleDimensions.widthFeet} ft &bull; {scheduleDimensions.widthGatta} Gatta
+                  </span>
+                </div>
+
+                <div className="p-2.5 rounded-lg bg-[#EAF2EB] border border-[#BCD4C0]">
+                  <span className="text-[#3D5A40] text-[10px] uppercase font-bold tracking-wider block">Schedule Size</span>
+                  <div className="font-mono font-bold text-xs text-[#264027] mt-0.5 truncate">
+                    {scheduleDimensions.dimensionsMetric}
+                  </div>
+                  <span className="text-[10px] text-[#3D5A40] block mt-0.5">
+                    Shape: {scheduleDimensions.shapeClassification}
+                  </span>
+                </div>
+              </div>
+            </div>
+
             {/* 4 Directional Cards */}
             <div className="space-y-2.5">
+
               {[
                 { 
                   dir: 'North', 

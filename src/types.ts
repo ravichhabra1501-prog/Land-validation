@@ -16,6 +16,9 @@ export type IndicLanguage =
   | 'telugu'
   | 'kannada'
   | 'tamil'
+  | 'malayalam'
+  | 'odia'
+  | 'assamese'
   | 'urdu'
   | 'english';
 
@@ -49,6 +52,7 @@ export interface FieldItem<T = string> {
   verifiedBy?: string;
   verifiedAt?: string;
   originalExtractedValue?: T;
+  previousValue?: T;
 }
 
 export interface CoSharer {
@@ -141,7 +145,7 @@ export interface ExtractedLandRecord {
     deskewAngleDegrees: number;
     contrastScore: number;
     dpiEstimated: number;
-    binarizationMethod: 'Otsu' | 'Sauvola' | 'AdaptiveGaussian';
+    binarizationMethod: 'Otsu' | 'Sauvola' | 'AdaptiveGaussian' | 'OtsuGlobal';
     noiseReductionApplied: boolean;
   };
 

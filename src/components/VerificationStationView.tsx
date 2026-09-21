@@ -36,6 +36,12 @@ import { getRecordModificationHistory } from '../utils/modificationHistoryUtils'
 import { getRecordChangeLog } from '../utils/changeLogUtils';
 import { RecordChangeLogTimeline } from './RecordChangeLogTimeline';
 import { ValidationRuleTooltip, InputGuidanceBanner } from './ValidationRuleTooltip';
+import { 
+  PreviousValueIndicator, 
+  ModifiedFieldsSummaryBanner, 
+  ActiveEditPreviousValueBanner,
+  FIELD_LABELS
+} from './PreviousValueIndicator';
 
 interface VerificationStationViewProps {
   records: ExtractedLandRecord[];
@@ -149,34 +155,96 @@ export const VerificationStationView: React.FC<VerificationStationViewProps> = (
 
     if (fieldKey === 'khasraNumber') {
       origVal = updated.khasraNumber.value;
-      updated.khasraNumber = { ...updated.khasraNumber, value: fieldEditValue, confidence: 99, isFlagged: false };
+      updated.khasraNumber = { 
+        ...updated.khasraNumber, 
+        value: fieldEditValue, 
+        confidence: 99, 
+        isFlagged: false,
+        previousValue: origVal,
+        originalExtractedValue: updated.khasraNumber.originalExtractedValue ?? origVal
+      };
     } else if (fieldKey === 'khataNumber') {
       origVal = updated.khataNumber.value;
-      updated.khataNumber = { ...updated.khataNumber, value: fieldEditValue, confidence: 99, isFlagged: false };
+      updated.khataNumber = { 
+        ...updated.khataNumber, 
+        value: fieldEditValue, 
+        confidence: 99, 
+        isFlagged: false,
+        previousValue: origVal,
+        originalExtractedValue: updated.khataNumber.originalExtractedValue ?? origVal
+      };
     } else if (fieldKey === 'primaryOwnerName') {
       origVal = updated.primaryOwnerName.value;
-      updated.primaryOwnerName = { ...updated.primaryOwnerName, value: fieldEditValue, confidence: 99, isFlagged: false };
+      updated.primaryOwnerName = { 
+        ...updated.primaryOwnerName, 
+        value: fieldEditValue, 
+        confidence: 99, 
+        isFlagged: false,
+        previousValue: origVal,
+        originalExtractedValue: updated.primaryOwnerName.originalExtractedValue ?? origVal
+      };
     } else if (fieldKey === 'totalAreaDeclared') {
       origVal = String(updated.totalAreaDeclared.value);
       const numVal = parseFloat(fieldEditValue) || updated.totalAreaDeclared.value;
-      updated.totalAreaDeclared = { ...updated.totalAreaDeclared, value: numVal, confidence: 99, isFlagged: false };
+      updated.totalAreaDeclared = { 
+        ...updated.totalAreaDeclared, 
+        value: numVal, 
+        confidence: 99, 
+        isFlagged: false,
+        previousValue: origVal,
+        originalExtractedValue: updated.totalAreaDeclared.originalExtractedValue ?? origVal
+      };
       updated.normalizedAreaSqMeters = numVal * 10000;
     } else if (fieldKey === 'irrigationSource') {
       origVal = updated.irrigationSource?.value || '';
-      updated.irrigationSource = { value: fieldEditValue, confidence: 99, isFlagged: false };
+      updated.irrigationSource = { 
+        value: fieldEditValue, 
+        confidence: 99, 
+        isFlagged: false,
+        previousValue: origVal,
+        originalExtractedValue: updated.irrigationSource?.originalExtractedValue ?? origVal
+      };
     } else if (fieldKey === 'encumbranceStatus') {
       origVal = updated.encumbranceStatus.value;
-      updated.encumbranceStatus = { ...updated.encumbranceStatus, value: fieldEditValue as any, confidence: 99, isFlagged: false };
+      updated.encumbranceStatus = { 
+        ...updated.encumbranceStatus, 
+        value: fieldEditValue as any, 
+        confidence: 99, 
+        isFlagged: false,
+        previousValue: origVal,
+        originalExtractedValue: updated.encumbranceStatus.originalExtractedValue ?? origVal
+      };
     } else if (fieldKey === 'parentageOrSpouse') {
       origVal = updated.parentageOrSpouse.value;
-      updated.parentageOrSpouse = { ...updated.parentageOrSpouse, value: fieldEditValue, confidence: 99, isFlagged: false };
+      updated.parentageOrSpouse = { 
+        ...updated.parentageOrSpouse, 
+        value: fieldEditValue, 
+        confidence: 99, 
+        isFlagged: false,
+        previousValue: origVal,
+        originalExtractedValue: updated.parentageOrSpouse.originalExtractedValue ?? origVal
+      };
     } else if (fieldKey === 'annualLandRevenue') {
       origVal = String(updated.annualLandRevenue.value);
       const numVal = parseFloat(fieldEditValue) || 0;
-      updated.annualLandRevenue = { ...updated.annualLandRevenue, value: numVal, confidence: 99, isFlagged: false };
+      updated.annualLandRevenue = { 
+        ...updated.annualLandRevenue, 
+        value: numVal, 
+        confidence: 99, 
+        isFlagged: false,
+        previousValue: origVal,
+        originalExtractedValue: updated.annualLandRevenue.originalExtractedValue ?? origVal
+      };
     } else if (fieldKey === 'landClassification') {
       origVal = updated.landClassification.value;
-      updated.landClassification = { ...updated.landClassification, value: fieldEditValue, confidence: 99, isFlagged: false };
+      updated.landClassification = { 
+        ...updated.landClassification, 
+        value: fieldEditValue, 
+        confidence: 99, 
+        isFlagged: false,
+        previousValue: origVal,
+        originalExtractedValue: updated.landClassification.originalExtractedValue ?? origVal
+      };
     }
 
     // Append to timestamped modification history & changeLog
@@ -234,6 +302,131 @@ export const VerificationStationView: React.FC<VerificationStationViewProps> = (
     updated.validationResults = runAutomatedValidationRules(updated, records);
     onUpdateRecord(updated);
     setEditingFieldKey(null);
+  };
+
+  // Revert a field to its previous verified value
+  const handleRevertField = (fieldKey: string, previousValue: string) => {
+    const updated = { ...selectedRecord };
+    let currentVal = '';
+
+    if (fieldKey === 'khasraNumber') {
+      currentVal = updated.khasraNumber.value;
+      updated.khasraNumber = { 
+        ...updated.khasraNumber, 
+        value: previousValue, 
+        previousValue: currentVal, 
+        confidence: 99 
+      };
+    } else if (fieldKey === 'khataNumber') {
+      currentVal = updated.khataNumber.value;
+      updated.khataNumber = { 
+        ...updated.khataNumber, 
+        value: previousValue, 
+        previousValue: currentVal, 
+        confidence: 99 
+      };
+    } else if (fieldKey === 'primaryOwnerName') {
+      currentVal = updated.primaryOwnerName.value;
+      updated.primaryOwnerName = { 
+        ...updated.primaryOwnerName, 
+        value: previousValue, 
+        previousValue: currentVal, 
+        confidence: 99 
+      };
+    } else if (fieldKey === 'totalAreaDeclared') {
+      currentVal = String(updated.totalAreaDeclared.value);
+      const numVal = parseFloat(previousValue) || updated.totalAreaDeclared.value;
+      updated.totalAreaDeclared = { 
+        ...updated.totalAreaDeclared, 
+        value: numVal, 
+        previousValue: currentVal, 
+        confidence: 99 
+      };
+      updated.normalizedAreaSqMeters = numVal * 10000;
+    } else if (fieldKey === 'irrigationSource') {
+      currentVal = updated.irrigationSource?.value || '';
+      updated.irrigationSource = { 
+        value: previousValue, 
+        previousValue: currentVal, 
+        confidence: 99, 
+        isFlagged: false 
+      };
+    } else if (fieldKey === 'encumbranceStatus') {
+      currentVal = updated.encumbranceStatus.value;
+      updated.encumbranceStatus = { 
+        ...updated.encumbranceStatus, 
+        value: previousValue as any, 
+        previousValue: currentVal, 
+        confidence: 99 
+      };
+    } else if (fieldKey === 'parentageOrSpouse') {
+      currentVal = updated.parentageOrSpouse.value;
+      updated.parentageOrSpouse = { 
+        ...updated.parentageOrSpouse, 
+        value: previousValue, 
+        previousValue: currentVal, 
+        confidence: 99 
+      };
+    } else if (fieldKey === 'annualLandRevenue') {
+      currentVal = String(updated.annualLandRevenue.value);
+      const numVal = parseFloat(previousValue) || 0;
+      updated.annualLandRevenue = { 
+        ...updated.annualLandRevenue, 
+        value: numVal, 
+        previousValue: currentVal, 
+        confidence: 99 
+      };
+    } else if (fieldKey === 'landClassification') {
+      currentVal = updated.landClassification.value;
+      updated.landClassification = { 
+        ...updated.landClassification, 
+        value: previousValue, 
+        previousValue: currentVal, 
+        confidence: 99 
+      };
+    }
+
+    const prevHistory = getRecordModificationHistory(selectedRecord);
+    const prevChangeLog = getRecordChangeLog(selectedRecord);
+    const nowIso = new Date().toISOString();
+    const officerDisplayName = isRevenueOfficer ? 'SDM / Revenue Officer' : 'Patwari / Verification Specialist';
+    const fieldLabel = FIELD_LABELS[fieldKey] || fieldKey;
+
+    const revertModEntry: RecordModificationEntry = {
+      id: `MOD-REV-${Date.now()}`,
+      timestamp: nowIso,
+      userId: isRevenueOfficer ? 'OFF-REV-094' : 'SPEC-PAT-108',
+      userName: officerDisplayName,
+      userRole: userRole,
+      changeType: 'FIELD_CORRECTION',
+      fieldKey,
+      fieldLabel,
+      previousValue: currentVal,
+      newValue: previousValue,
+      reason: 'Reverted to previous verified value',
+      notes: `Restored field "${fieldLabel}" back to previous value "${previousValue}".`,
+      sourceTerminal: 'Verification Workstation Node #01'
+    };
+
+    const revertChangeLogEntry: ChangeLogEntry = {
+      id: `CL-REV-${Date.now()}`,
+      timestamp: nowIso,
+      officerName: isRevenueOfficer ? 'SDM Alok Srivastava' : 'Patwari Rajesh Kumar Sharma',
+      role: userRole,
+      action: 'FIELD_CORRECTION',
+      fieldKey,
+      fieldLabel,
+      oldValue: currentVal,
+      newValue: previousValue,
+      reason: 'Reverted to previous verified value',
+      remarks: `Restored field "${fieldLabel}" back to previous value "${previousValue}".`,
+      sourceTerminal: 'Verification Workstation Node #01'
+    };
+
+    updated.modificationHistory = [revertModEntry, ...prevHistory];
+    updated.changeLog = [revertChangeLogEntry, ...prevChangeLog];
+    updated.validationResults = runAutomatedValidationRules(updated, records);
+    onUpdateRecord(updated);
   };
 
   // One-click sanction
@@ -705,6 +898,16 @@ export const VerificationStationView: React.FC<VerificationStationViewProps> = (
             ) : (
               <>
 
+            {/* Modified Fields Summary Banner (Surfaces when manual corrections exist) */}
+            <ModifiedFieldsSummaryBanner 
+              record={selectedRecord} 
+              onFocusField={(fKey) => {
+                const val = (selectedRecord as any)[fKey]?.value ?? '';
+                const bb = (selectedRecord as any)[fKey]?.boundingBox;
+                handleStartEdit(fKey, String(val), bb);
+              }} 
+            />
+
             {/* Section 1: Administrative Hierarchy */}
             <div className="space-y-2">
               <span className="text-[11px] font-bold text-[#5A5A40] uppercase tracking-wider flex items-center gap-1 natural-serif">
@@ -745,15 +948,26 @@ export const VerificationStationView: React.FC<VerificationStationViewProps> = (
                   className="p-3 rounded-lg border border-[#DCD7CE] bg-[#FAF8F5] hover:border-[#8B4513] transition-all cursor-pointer relative shadow-2xs"
                 >
                   <div className="flex items-center justify-between text-[11px]">
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="text-[#5A5A40] font-medium natural-serif">Khasra / Gat No.</span>
                       <ValidationRuleTooltip fieldKey="khasraNumber" record={selectedRecord} showBadge align="left" />
+                      <PreviousValueIndicator 
+                        fieldKey="khasraNumber" 
+                        record={selectedRecord} 
+                        size="xs"
+                        onRevert={(pVal) => handleRevertField('khasraNumber', pVal)} 
+                      />
                     </div>
                     {getConfidenceBadge(selectedRecord.khasraNumber.confidence)}
                   </div>
 
                   {editingFieldKey === 'khasraNumber' ? (
                     <div className="mt-1 space-y-1.5" onClick={(e) => e.stopPropagation()}>
+                      <ActiveEditPreviousValueBanner 
+                        fieldKey="khasraNumber" 
+                        record={selectedRecord} 
+                        onRestore={(val) => setFieldEditValue(val)} 
+                      />
                       <div className="flex items-center gap-1">
                         <input
                           id="input-edit-khasra-number"
@@ -785,7 +999,9 @@ export const VerificationStationView: React.FC<VerificationStationViewProps> = (
                     </div>
                   ) : (
                     <div className="mt-1 flex items-center justify-between">
-                      <span className="text-base font-bold text-[#33332A] natural-serif">{selectedRecord.khasraNumber.value}</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-base font-bold text-[#33332A] natural-serif">{selectedRecord.khasraNumber.value}</span>
+                      </div>
                       <button 
                         onClick={(e) => { e.stopPropagation(); handleStartEdit('khasraNumber', selectedRecord.khasraNumber.value, selectedRecord.khasraNumber.boundingBox); }}
                         className="p-1 text-[#6B6B58] hover:text-[#8B4513] cursor-pointer"
@@ -804,15 +1020,26 @@ export const VerificationStationView: React.FC<VerificationStationViewProps> = (
                   className="p-3 rounded-lg border border-[#DCD7CE] bg-[#FAF8F5] hover:border-[#8B4513] transition-all cursor-pointer shadow-2xs"
                 >
                   <div className="flex items-center justify-between text-[11px]">
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="text-[#5A5A40] font-medium natural-serif">Khata / Khatauni</span>
                       <ValidationRuleTooltip fieldKey="khataNumber" record={selectedRecord} showBadge align="center" />
+                      <PreviousValueIndicator 
+                        fieldKey="khataNumber" 
+                        record={selectedRecord} 
+                        size="xs"
+                        onRevert={(pVal) => handleRevertField('khataNumber', pVal)} 
+                      />
                     </div>
                     {getConfidenceBadge(selectedRecord.khataNumber.confidence)}
                   </div>
 
                   {editingFieldKey === 'khataNumber' ? (
                     <div className="mt-1 space-y-1.5" onClick={(e) => e.stopPropagation()}>
+                      <ActiveEditPreviousValueBanner 
+                        fieldKey="khataNumber" 
+                        record={selectedRecord} 
+                        onRestore={(val) => setFieldEditValue(val)} 
+                      />
                       <div className="flex items-center gap-1">
                         <input
                           id="input-edit-khata-number"
@@ -863,15 +1090,26 @@ export const VerificationStationView: React.FC<VerificationStationViewProps> = (
                   className="p-3 rounded-lg border border-[#DCD7CE] bg-[#FAF8F5] hover:border-[#8B4513] transition-all cursor-pointer shadow-2xs"
                 >
                   <div className="flex items-center justify-between text-[11px]">
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="text-[#5A5A40] font-medium natural-serif">Declared Area</span>
                       <ValidationRuleTooltip fieldKey="totalAreaDeclared" record={selectedRecord} showBadge align="right" />
+                      <PreviousValueIndicator 
+                        fieldKey="totalAreaDeclared" 
+                        record={selectedRecord} 
+                        size="xs"
+                        onRevert={(pVal) => handleRevertField('totalAreaDeclared', pVal)} 
+                      />
                     </div>
                     {getConfidenceBadge(selectedRecord.totalAreaDeclared.confidence)}
                   </div>
 
                   {editingFieldKey === 'totalAreaDeclared' ? (
                     <div className="mt-1 space-y-1.5" onClick={(e) => e.stopPropagation()}>
+                      <ActiveEditPreviousValueBanner 
+                        fieldKey="totalAreaDeclared" 
+                        record={selectedRecord} 
+                        onRestore={(val) => setFieldEditValue(val)} 
+                      />
                       <div className="flex items-center gap-1">
                         <input
                           id="input-edit-total-area"
@@ -937,15 +1175,26 @@ export const VerificationStationView: React.FC<VerificationStationViewProps> = (
                 className="p-3 rounded-lg border border-[#DCD7CE] bg-[#F5F3EE] hover:border-[#8B4513] transition-all cursor-pointer shadow-2xs"
               >
                 <div className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5 flex-wrap">
                     <span className="text-[#5A5A40] font-medium natural-serif">Primary Landowner (खातेदार)</span>
                     <ValidationRuleTooltip fieldKey="primaryOwnerName" record={selectedRecord} showBadge align="left" />
+                    <PreviousValueIndicator 
+                      fieldKey="primaryOwnerName" 
+                      record={selectedRecord} 
+                      size="xs"
+                      onRevert={(pVal) => handleRevertField('primaryOwnerName', pVal)} 
+                    />
                   </div>
                   {getConfidenceBadge(selectedRecord.primaryOwnerName.confidence)}
                 </div>
 
                 {editingFieldKey === 'primaryOwnerName' ? (
                   <div className="mt-2 space-y-2" onClick={(e) => e.stopPropagation()}>
+                    <ActiveEditPreviousValueBanner 
+                      fieldKey="primaryOwnerName" 
+                      record={selectedRecord} 
+                      onRestore={(val) => setFieldEditValue(val)} 
+                    />
                     <div className="flex items-center gap-1.5">
                       <input
                         id="input-edit-primary-owner"
@@ -990,9 +1239,15 @@ export const VerificationStationView: React.FC<VerificationStationViewProps> = (
                   <div className="mt-1 flex items-center justify-between">
                     <div>
                       <span className="text-sm font-bold text-[#33332A] block natural-serif">{selectedRecord.primaryOwnerName.value}</span>
-                      <div className="flex items-center gap-1.5 mt-0.5">
+                      <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                         <span className="text-xs text-[#6B6B58] font-medium">{selectedRecord.parentageOrSpouse.value}</span>
                         <ValidationRuleTooltip fieldKey="parentageOrSpouse" record={selectedRecord} align="left" size="sm" />
+                        <PreviousValueIndicator 
+                          fieldKey="parentageOrSpouse" 
+                          record={selectedRecord} 
+                          size="xs"
+                          onRevert={(pVal) => handleRevertField('parentageOrSpouse', pVal)} 
+                        />
                         <button
                           onClick={(e) => { e.stopPropagation(); handleStartEdit('parentageOrSpouse', selectedRecord.parentageOrSpouse.value); }}
                           className="p-0.5 text-[#6B6B58] hover:text-[#8B4513] cursor-pointer"
@@ -1015,6 +1270,11 @@ export const VerificationStationView: React.FC<VerificationStationViewProps> = (
                 {/* Parentage Inline Edit Mode */}
                 {editingFieldKey === 'parentageOrSpouse' && (
                   <div className="mt-2.5 p-2.5 bg-[#FAF8F5] border border-[#DCD7CE] rounded-lg space-y-2" onClick={(e) => e.stopPropagation()}>
+                    <ActiveEditPreviousValueBanner 
+                      fieldKey="parentageOrSpouse" 
+                      record={selectedRecord} 
+                      onRestore={(val) => setFieldEditValue(val)} 
+                    />
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-bold text-[#5A5A40] uppercase tracking-wider natural-serif">
                         Edit Parentage / Spouse Relationship:
@@ -1082,15 +1342,26 @@ export const VerificationStationView: React.FC<VerificationStationViewProps> = (
               {/* Land Classification Card */}
               <div className="p-3 rounded-lg border border-[#DCD7CE] bg-[#FAF8F5]">
                 <div className="flex items-center justify-between mb-1">
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5 flex-wrap">
                     <span className="text-[10px] text-[#5A5A40] uppercase font-bold natural-serif">Land Classification</span>
                     <ValidationRuleTooltip fieldKey="landClassification" record={selectedRecord} showBadge align="left" />
+                    <PreviousValueIndicator 
+                      fieldKey="landClassification" 
+                      record={selectedRecord} 
+                      size="xs"
+                      onRevert={(pVal) => handleRevertField('landClassification', pVal)} 
+                    />
                   </div>
                   {getConfidenceBadge(selectedRecord.landClassification.confidence)}
                 </div>
 
                 {editingFieldKey === 'landClassification' ? (
                   <div className="mt-1 space-y-1.5" onClick={(e) => e.stopPropagation()}>
+                    <ActiveEditPreviousValueBanner 
+                      fieldKey="landClassification" 
+                      record={selectedRecord} 
+                      onRestore={(val) => setFieldEditValue(val)} 
+                    />
                     <div className="flex items-center gap-1">
                       <select
                         id="input-edit-land-classification"
@@ -1137,25 +1408,50 @@ export const VerificationStationView: React.FC<VerificationStationViewProps> = (
                     </button>
                   </div>
                 )}
-                <span className="text-[11px] text-[#6B6B58] block mt-1"><span className="natural-serif font-medium">Irrigation:</span> {selectedRecord.irrigationSource?.value || 'Rainfed'}</span>
+                <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                  <span className="text-[11px] text-[#6B6B58]"><span className="natural-serif font-medium">Irrigation:</span> {selectedRecord.irrigationSource?.value || 'Rainfed'}</span>
+                  <PreviousValueIndicator 
+                    fieldKey="irrigationSource" 
+                    record={selectedRecord} 
+                    size="xs"
+                    onRevert={(pVal) => handleRevertField('irrigationSource', pVal)} 
+                  />
+                </div>
               </div>
 
               {/* Encumbrance & Revenue Card */}
               <div className="p-3 rounded-lg border border-[#DCD7CE] bg-[#FAF8F5]">
                 <div className="flex items-center justify-between mb-1">
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5 flex-wrap">
                     <span className="text-[10px] text-[#5A5A40] uppercase font-bold natural-serif">Encumbrance &amp; Revenue</span>
                     <ValidationRuleTooltip fieldKey="encumbranceStatus" record={selectedRecord} showBadge align="right" />
+                    <PreviousValueIndicator 
+                      fieldKey="encumbranceStatus" 
+                      record={selectedRecord} 
+                      size="xs"
+                      onRevert={(pVal) => handleRevertField('encumbranceStatus', pVal)} 
+                    />
                   </div>
                   <div className="flex items-center gap-1">
                     <span className="text-[10px] text-[#6B6B58] natural-serif font-medium">Lagaan:</span>
                     <ValidationRuleTooltip fieldKey="annualLandRevenue" record={selectedRecord} align="right" />
+                    <PreviousValueIndicator 
+                      fieldKey="annualLandRevenue" 
+                      record={selectedRecord} 
+                      size="xs"
+                      onRevert={(pVal) => handleRevertField('annualLandRevenue', pVal)} 
+                    />
                   </div>
                 </div>
 
                 {/* Encumbrance Editing */}
                 {editingFieldKey === 'encumbranceStatus' ? (
                   <div className="mt-1 space-y-1.5 mb-2" onClick={(e) => e.stopPropagation()}>
+                    <ActiveEditPreviousValueBanner 
+                      fieldKey="encumbranceStatus" 
+                      record={selectedRecord} 
+                      onRestore={(val) => setFieldEditValue(val)} 
+                    />
                     <div className="flex items-center gap-1">
                       <select
                         id="input-edit-encumbrance-status"
@@ -1191,6 +1487,11 @@ export const VerificationStationView: React.FC<VerificationStationViewProps> = (
                   </div>
                 ) : editingFieldKey === 'annualLandRevenue' ? (
                   <div className="mt-1 space-y-1.5 mb-2" onClick={(e) => e.stopPropagation()}>
+                    <ActiveEditPreviousValueBanner 
+                      fieldKey="annualLandRevenue" 
+                      record={selectedRecord} 
+                      onRestore={(val) => setFieldEditValue(val)} 
+                    />
                     <div className="flex items-center gap-1">
                       <input
                         id="input-edit-annual-revenue"

@@ -26,15 +26,23 @@ import {
   Sparkles,
   Check,
   Calendar,
-  MessageSquare
+  MessageSquare,
+  Grid,
+  LayoutGrid
 } from 'lucide-react';
 import { ExtractedLandRecord, UserRole, AuthUser } from '../types';
 import { CadastralGoogleMapView } from './CadastralGoogleMapView';
 import { DigitizedRecordDossier } from './DigitizedRecordDossier';
 import { CADASTRAL_PLOTS, CadastralPlot, VILLAGE_CENTERS } from '../data/cadastralPlotsData';
-import { calculateBoundarySegments, calculatePerimeterMeters } from '../utils/cadastralUtils';
+import { 
+  calculateBoundarySegments, 
+  calculatePerimeterMeters,
+  calculateLandScheduleDimensions,
+  LandScheduleDimensions
+} from '../utils/cadastralUtils';
 
 interface CadastralGisViewProps {
+
   records: ExtractedLandRecord[];
   selectedRecord: ExtractedLandRecord;
   onSelectRecord: (record: ExtractedLandRecord) => void;
@@ -55,7 +63,10 @@ export const CadastralGisView: React.FC<CadastralGisViewProps> = ({
 }) => {
   // View mode: 'split' (side-by-side record & map), 'standard' (map + compact inspector), or 'full_map'
   const [viewMode, setViewMode] = useState<'split' | 'standard' | 'full_map'>('split');
-  const [activeLayer, setActiveLayer] = useState<'cadastral' | 'satellite' | 'soils' | 'disputes'>('satellite');
+  const [activeLayer, setActiveLayer] = useState<'cadastral' | 'satellite' | 'plain' | 'soils' | 'disputes'>('satellite');
+  const [showGrid, setShowGrid] = useState<boolean>(true);
+  const [gridInterval, setGridInterval] = useState<number>(50);
+  const [showPlainStructure, setShowPlainStructure] = useState<boolean>(false);
   
   const isCitizen = userRole === 'CITIZEN_VIEWER';
   const citizenVillage = currentUser?.assignedVillage || 'Wagholi';
@@ -138,6 +149,7 @@ export const CadastralGisView: React.FC<CadastralGisViewProps> = ({
   // Geodesic boundary segments and perimeter for currently selected parcel
   const boundarySegments = calculateBoundarySegments(currentPlot.coordinates);
   const totalPerimeterMeters = calculatePerimeterMeters(currentPlot.coordinates);
+  const scheduleDimensions = calculateLandScheduleDimensions(currentPlot.coordinates);
 
   const handlePlotClick = (plot: CadastralPlot) => {
     if (isCitizen && plot.village !== citizenVillage) {
@@ -192,7 +204,20 @@ export const CadastralGisView: React.FC<CadastralGisViewProps> = ({
     'Karnataka': 'KA',
     'Rajasthan': 'RJ',
     'Gujarat': 'GJ',
-    'Madhya Pradesh': 'MP'
+    'Madhya Pradesh': 'MP',
+    'Himachal Pradesh': 'HP',
+    'Uttarakhand': 'UK',
+    'Assam': 'AS',
+    'West Bengal': 'WB',
+    'Bihar': 'BR',
+    'Odisha': 'OD',
+    'Andhra Pradesh': 'AP',
+    'Telangana': 'TS',
+    'Kerala': 'KL',
+    'Jharkhand': 'JH',
+    'Chhattisgarh': 'CG',
+    'Haryana': 'HR',
+    'Tamil Nadu': 'TN'
   };
 
   return (
@@ -330,18 +355,36 @@ export const CadastralGisView: React.FC<CadastralGisViewProps> = ({
 
             {/* Layer Tabs */}
             <div className="flex items-center gap-1 bg-[#EBE7DF] p-1 rounded-lg border border-[#DCD7CE] text-xs">
-              {(['satellite', 'cadastral', 'soils', 'disputes'] as const).map((layer) => (
+              {(['satellite', 'plain', 'soils', 'cadastral', 'disputes'] as const).map((layer) => (
                 <button
                   key={layer}
                   id={`btn-layer-${layer}`}
-                  onClick={() => setActiveLayer(layer)}
-                  className={`px-2.5 py-1 rounded-md font-semibold capitalize transition-colors cursor-pointer ${
+                  onClick={() => {
+                    setActiveLayer(layer);
+                    setShowPlainStructure(layer === 'plain');
+                  }}
+                  className={`px-2.5 py-1 rounded-md font-semibold capitalize transition-colors cursor-pointer flex items-center gap-1.5 ${
                     activeLayer === layer
                       ? 'bg-natural-olive text-[#FFF9EA] shadow-2xs'
                       : 'text-[#4A3728] hover:text-[#33332A]'
                   }`}
                 >
-                  {layer === 'satellite' ? 'Satellite' : layer}
+                  {layer === 'plain' && <LayoutGrid className="w-3 h-3 text-[#E5C37A]" />}
+                  {layer === 'satellite' && <span>🛰️</span>}
+                  {layer === 'soils' && <span>🌾</span>}
+                  {layer === 'cadastral' && <span>📐</span>}
+                  {layer === 'disputes' && <span>⚠️</span>}
+                  <span>
+                    {layer === 'satellite' 
+                      ? 'Full Satellite' 
+                      : layer === 'plain' 
+                      ? 'Plain (सादा)' 
+                      : layer === 'soils'
+                      ? 'Soil Model'
+                      : layer === 'cadastral'
+                      ? 'Cadastral'
+                      : 'Disputes'}
+                  </span>
                 </button>
               ))}
             </div>
@@ -499,8 +542,49 @@ export const CadastralGisView: React.FC<CadastralGisViewProps> = ({
                 <Search className="w-3.5 h-3.5 text-[#6B6B58] absolute left-2 top-2" />
               </div>
 
-              {/* Layer Toggles */}
-              <div className="flex items-center gap-3 text-xs">
+              {/* Layer & Feature Toggles */}
+              <div className="flex flex-wrap items-center gap-3 text-xs">
+                {/* Cadastral Survey Grid Toggle */}
+                <div className="flex items-center gap-1 bg-[#FAF8F5] px-2 py-0.5 rounded border border-[#DCD7CE]">
+                  <label className="flex items-center gap-1 cursor-pointer text-[#4A3728]">
+                    <input
+                      id="chk-split-show-grid"
+                      type="checkbox"
+                      checked={showGrid}
+                      onChange={(e) => setShowGrid(e.target.checked)}
+                      className="rounded text-natural-olive accent-[#5A5A40]"
+                    />
+                    <Grid className="w-3 h-3 text-[#5A5A40]" />
+                    <span className="font-semibold text-[11px]">Grid</span>
+                  </label>
+                  {showGrid && (
+                    <select
+                      id="select-split-grid-interval"
+                      value={gridInterval}
+                      onChange={(e) => setGridInterval(Number(e.target.value))}
+                      aria-label="Cadastral Grid Spacing"
+                      className="text-[10px] font-mono bg-transparent text-[#5A5A40] font-bold border-l border-[#DCD7CE] pl-1 ml-0.5 cursor-pointer focus:outline-hidden"
+                    >
+                      <option value={25}>25m</option>
+                      <option value={50}>50m</option>
+                      <option value={100}>100m</option>
+                    </select>
+                  )}
+                </div>
+
+                {/* Plain Structure Toggle */}
+                <label className="flex items-center gap-1 cursor-pointer text-[#4A3728] bg-[#FAF8F5] px-2 py-0.5 rounded border border-[#DCD7CE]">
+                  <input
+                    id="chk-split-show-plain"
+                    type="checkbox"
+                    checked={showPlainStructure || activeLayer === 'plain'}
+                    onChange={(e) => setShowPlainStructure(e.target.checked)}
+                    className="rounded text-natural-olive accent-[#5A5A40]"
+                  />
+                  <Compass className="w-3 h-3 text-[#8B4513]" />
+                  <span className="font-semibold text-[11px]">Plain (मुनारा)</span>
+                </label>
+
                 <label className="flex items-center gap-1.5 cursor-pointer text-[#4A3728]">
                   <input
                     id="chk-split-show-roads"
@@ -542,54 +626,118 @@ export const CadastralGisView: React.FC<CadastralGisViewProps> = ({
               selectedPlot={currentPlot}
               onSelectPlot={handlePlotClick}
               activeLayer={activeLayer}
+              onLayerChange={setActiveLayer}
               cadastralOpacity={cadastralOpacity}
               onOpacityChange={setCadastralOpacity}
               showRoads={showRoads}
               showWaterbodies={showWaterbodies}
               showLabels={showLabels}
               onToggleLabels={() => setShowLabels(!showLabels)}
+              showGrid={showGrid}
+              onToggleGrid={() => setShowGrid(!showGrid)}
+              gridInterval={gridInterval}
+              onGridIntervalChange={setGridInterval}
+              showPlainStructure={activeLayer === 'plain'}
+              onTogglePlainStructure={() => {
+                const next = activeLayer !== 'plain';
+                setActiveLayer(next ? 'plain' : 'satellite');
+                setShowPlainStructure(next);
+              }}
               heightClass="h-[480px]"
             />
 
-            {/* Spatial Boundary Segments Telemetry Card */}
-            <div className="p-3.5 bg-[#F5F3EE] border border-[#DCD7CE] rounded-lg space-y-2.5 text-xs">
-              <div className="flex items-center justify-between">
+            {/* Spatial Boundary Segments & Land Schedule Dimensions Card */}
+            <div className="p-3.5 bg-[#FAF8F5] border border-[#DCD7CE] rounded-xl space-y-3 text-xs shadow-2xs">
+              <div className="flex items-center justify-between pb-2 border-b border-[#DCD7CE]">
                 <div className="flex items-center gap-2">
                   <Ruler className="w-4 h-4 text-[#5A5A40]" />
-                  <span className="font-bold text-[#33332A] natural-serif">
-                    Spatial Polygon Boundary Edges (चतुःसीमा मापन)
-                  </span>
+                  <div>
+                    <span className="font-bold text-[#33332A] natural-serif text-sm block">
+                      Land Schedule Dimensions (भू-पैमाइश सूची: लंबाई व चौड़ाई)
+                    </span>
+                    <span className="text-[11px] text-[#6B6B58]">
+                      Khasra #{currentPlot.khasra} &bull; Village {currentPlot.village} &bull; Accessible to All Roles
+                    </span>
+                  </div>
                 </div>
-                <span className="font-mono text-[11px] font-bold text-[#5A5A40] bg-[#FAF8F5] px-2 py-0.5 rounded border border-[#DCD7CE]">
-                  Perimeter: {totalPerimeterMeters} m
+                <span className="font-mono text-[11px] font-bold text-[#5A5A40] bg-[#F5F3EE] px-2.5 py-1 rounded-lg border border-[#DCD7CE]">
+                  Perimeter: {scheduleDimensions.perimeterMeters} m ({scheduleDimensions.perimeterFeet} ft)
                 </span>
               </div>
 
-              {/* 4 Edge Lengths & Bearings */}
+              {/* Primary Dimensions: Length × Width Highlight Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <div className="p-2.5 rounded-lg bg-[#F5F3EE] border border-[#DCD7CE]">
+                  <span className="text-[#5A5A40] block text-[10px] uppercase font-bold tracking-wider">
+                    Calculated Length (लंबाई - N↔S)
+                  </span>
+                  <div className="flex items-baseline gap-1.5 mt-0.5">
+                    <span className="font-mono font-bold text-base text-[#33332A]">{scheduleDimensions.lengthMeters} m</span>
+                    <span className="text-[11px] text-[#6B6B58] font-mono">({scheduleDimensions.lengthFeet} ft)</span>
+                  </div>
+                  <span className="text-[10px] text-[#6B6B58] block mt-0.5">
+                    Traditional: {scheduleDimensions.lengthGatta} Gatta (Jarib)
+                  </span>
+                </div>
+
+                <div className="p-2.5 rounded-lg bg-[#F5F3EE] border border-[#DCD7CE]">
+                  <span className="text-[#5A5A40] block text-[10px] uppercase font-bold tracking-wider">
+                    Calculated Width (चौड़ाई - E↔W)
+                  </span>
+                  <div className="flex items-baseline gap-1.5 mt-0.5">
+                    <span className="font-mono font-bold text-base text-[#33332A]">{scheduleDimensions.widthMeters} m</span>
+                    <span className="text-[11px] text-[#6B6B58] font-mono">({scheduleDimensions.widthFeet} ft)</span>
+                  </div>
+                  <span className="text-[10px] text-[#6B6B58] block mt-0.5">
+                    Traditional: {scheduleDimensions.widthGatta} Gatta (Jarib)
+                  </span>
+                </div>
+
+                <div className="p-2.5 rounded-lg bg-[#EAF2EB] border border-[#BCD4C0]">
+                  <span className="text-[#3D5A40] block text-[10px] uppercase font-bold tracking-wider">
+                    Schedule Size (L × W)
+                  </span>
+                  <div className="font-mono font-bold text-xs text-[#264027] mt-1 truncate">
+                    {scheduleDimensions.dimensionsMetric}
+                  </div>
+                  <span className="text-[10px] text-[#3D5A40] block mt-0.5 truncate">
+                    Ratio: {scheduleDimensions.aspectRatio} &bull; {scheduleDimensions.shapeClassification}
+                  </span>
+                </div>
+              </div>
+
+              {/* 4 Cardinal Edge Lengths & Bearings */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {boundarySegments.map((seg) => (
-                  <div key={seg.direction} className="bg-[#FAF8F5] p-2 rounded border border-[#DCD7CE] text-[11px]">
-                    <span className="text-[10px] text-[#6B6B58] uppercase font-bold block">
-                      {seg.direction} Edge
-                    </span>
+                  <div key={seg.direction} className="bg-[#FAF8F5] p-2 rounded-lg border border-[#DCD7CE] text-[11px]">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] text-[#5A5A40] uppercase font-bold">
+                        {seg.direction} Edge
+                      </span>
+                      <span className="text-[9px] text-[#6B6B58] font-mono">
+                        {seg.direction === 'North' || seg.direction === 'South' ? 'Length' : 'Width'}
+                      </span>
+                    </div>
                     <span className="font-mono font-bold text-[#33332A] text-xs mt-0.5 block">
                       {seg.lengthMeters} m
                     </span>
-                    <span className="text-[10px] font-mono text-[#5A5A40] block">
-                      {seg.bearingCompass}
-                    </span>
+                    <div className="flex items-center justify-between text-[10px] text-[#6B6B58] font-mono mt-0.5">
+                      <span>{(seg.lengthMeters * 3.28084).toFixed(1)} ft</span>
+                      <span className="text-[#5A5A40] font-semibold">{seg.bearingCompass}</span>
+                    </div>
                   </div>
                 ))}
               </div>
 
-              <div className="flex items-center justify-between pt-1 border-t border-[#DCD7CE] text-[11px] text-[#6B6B58]">
+              <div className="flex flex-wrap items-center justify-between pt-1 border-t border-[#DCD7CE] text-[11px] text-[#6B6B58] gap-2">
                 <span>GIS Polygon Area: <strong>{currentPlot.areaSqM.toLocaleString()} sq.m</strong> ({currentPlot.areaHa} Ha)</span>
                 <span className="text-[#3D5A40] font-semibold flex items-center gap-1">
-                  <CheckCircle2 className="w-3 h-3" />
-                  <span>Physical Bund Corroboration: 98.2%</span>
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>Physical Bund Corroboration: 98.2% Aligned</span>
                 </span>
               </div>
             </div>
+
 
             {/* Quick Plot Switcher Chips */}
             <div className="pt-2 flex flex-wrap items-center justify-between gap-2 border-t border-[#DCD7CE]">
@@ -664,7 +812,48 @@ export const CadastralGisView: React.FC<CadastralGisViewProps> = ({
                 <Search className="w-3.5 h-3.5 text-[#6B6B58] absolute left-2 top-2" />
               </div>
 
-              <div className="flex items-center gap-4">
+              <div className="flex flex-wrap items-center gap-3">
+                {/* Cadastral Survey Grid Toggle */}
+                <div className="flex items-center gap-1 bg-[#FAF8F5] px-2 py-0.5 rounded border border-[#DCD7CE]">
+                  <label className="flex items-center gap-1 cursor-pointer text-[#4A3728]">
+                    <input
+                      id="chk-show-grid"
+                      type="checkbox"
+                      checked={showGrid}
+                      onChange={(e) => setShowGrid(e.target.checked)}
+                      className="rounded text-natural-olive accent-[#5A5A40]"
+                    />
+                    <Grid className="w-3 h-3 text-[#5A5A40]" />
+                    <span className="font-semibold text-[11px]">Survey Grid</span>
+                  </label>
+                  {showGrid && (
+                    <select
+                      id="select-grid-interval-standard"
+                      value={gridInterval}
+                      onChange={(e) => setGridInterval(Number(e.target.value))}
+                      aria-label="Cadastral Grid Spacing"
+                      className="text-[10px] font-mono bg-transparent text-[#5A5A40] font-bold border-l border-[#DCD7CE] pl-1 ml-0.5 cursor-pointer focus:outline-hidden"
+                    >
+                      <option value={25}>25m</option>
+                      <option value={50}>50m</option>
+                      <option value={100}>100m</option>
+                    </select>
+                  )}
+                </div>
+
+                {/* Plain Structure Toggle */}
+                <label className="flex items-center gap-1 cursor-pointer text-[#4A3728] bg-[#FAF8F5] px-2 py-0.5 rounded border border-[#DCD7CE]">
+                  <input
+                    id="chk-show-plain"
+                    type="checkbox"
+                    checked={showPlainStructure || activeLayer === 'plain'}
+                    onChange={(e) => setShowPlainStructure(e.target.checked)}
+                    className="rounded text-natural-olive accent-[#5A5A40]"
+                  />
+                  <Compass className="w-3 h-3 text-[#8B4513]" />
+                  <span className="font-semibold text-[11px]">Plain Structure</span>
+                </label>
+
                 <label className="flex items-center gap-1.5 cursor-pointer text-[#4A3728]">
                   <input
                     id="chk-show-roads"
@@ -706,13 +895,21 @@ export const CadastralGisView: React.FC<CadastralGisViewProps> = ({
               selectedPlot={currentPlot}
               onSelectPlot={handlePlotClick}
               activeLayer={activeLayer}
+              onLayerChange={setActiveLayer}
               cadastralOpacity={cadastralOpacity}
               onOpacityChange={setCadastralOpacity}
               showRoads={showRoads}
               showWaterbodies={showWaterbodies}
               showLabels={showLabels}
               onToggleLabels={() => setShowLabels(!showLabels)}
+              showGrid={showGrid}
+              onToggleGrid={() => setShowGrid(!showGrid)}
+              gridInterval={gridInterval}
+              onGridIntervalChange={setGridInterval}
+              showPlainStructure={showPlainStructure || activeLayer === 'plain'}
+              onTogglePlainStructure={() => setShowPlainStructure(!showPlainStructure)}
               heightClass="h-[520px]"
+              records={records}
             />
 
             {/* Quick Plot Switcher Chips */}
@@ -794,10 +991,51 @@ export const CadastralGisView: React.FC<CadastralGisViewProps> = ({
                   </div>
                 </div>
 
+                {/* Land Schedule Dimensions (Length & Width) */}
+                <div className="p-3 rounded-lg bg-[#FAF8F5] border border-[#DCD7CE] space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[#5A5A40] text-[10px] uppercase font-bold tracking-wider flex items-center gap-1">
+                      <Ruler className="w-3.5 h-3.5 text-[#5A5A40]" />
+                      <span>Land Schedule Dimensions (लंबाई व चौड़ाई)</span>
+                    </span>
+                    <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.2 rounded">
+                      All Roles
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="p-2 rounded bg-[#F5F3EE] border border-[#DCD7CE]">
+                      <span className="text-[9px] uppercase font-bold text-[#6B6B58] block">Length (N↔S)</span>
+                      <span className="font-mono font-bold text-xs text-[#33332A] block">
+                        {scheduleDimensions.lengthMeters} m
+                      </span>
+                      <span className="text-[10px] text-[#6B6B58] font-mono">
+                        ({scheduleDimensions.lengthFeet} ft / {scheduleDimensions.lengthGatta} G)
+                      </span>
+                    </div>
+
+                    <div className="p-2 rounded bg-[#F5F3EE] border border-[#DCD7CE]">
+                      <span className="text-[9px] uppercase font-bold text-[#6B6B58] block">Width (E↔W)</span>
+                      <span className="font-mono font-bold text-xs text-[#33332A] block">
+                        {scheduleDimensions.widthMeters} m
+                      </span>
+                      <span className="text-[10px] text-[#6B6B58] font-mono">
+                        ({scheduleDimensions.widthFeet} ft / {scheduleDimensions.widthGatta} G)
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between text-[10px] text-[#6B6B58] pt-1 border-t border-[#DCD7CE] font-mono">
+                    <span>Schedule Size: <strong className="text-[#33332A]">{scheduleDimensions.dimensionsMetric}</strong></span>
+                    <span>Perimeter: <strong>{scheduleDimensions.perimeterMeters} m</strong></span>
+                  </div>
+                </div>
+
                 <div>
                   <span className="text-[#5A5A40] block text-[10px] uppercase font-bold">Soil / Crop Classification</span>
                   <span className="font-medium text-[#33332A]">{currentPlot.soil}</span>
                 </div>
+
 
                 <div className="p-2.5 rounded-lg bg-[#F5F3EE] border border-[#DCD7CE] space-y-1">
                   <div className="flex items-center justify-between text-[10px]">
@@ -892,22 +1130,137 @@ export const CadastralGisView: React.FC<CadastralGisViewProps> = ({
             </button>
           </div>
 
+          {/* Full Map Land Schedule Header Ribbon */}
+          <div className="bg-[#F5F3EE] p-3 rounded-xl border border-[#DCD7CE] flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <div className="flex items-center gap-1.5">
+                <Ruler className="w-4 h-4 text-[#5A5A40]" />
+                <span className="font-bold text-[#33332A] natural-serif">Land Schedule:</span>
+              </div>
+              <span className="font-mono font-bold text-[#33332A] bg-[#FAF8F5] px-2.5 py-1 rounded-lg border border-[#DCD7CE]">
+                Length: {scheduleDimensions.lengthMeters} m ({scheduleDimensions.lengthFeet} ft)
+              </span>
+              <span className="font-mono font-bold text-[#33332A] bg-[#FAF8F5] px-2.5 py-1 rounded-lg border border-[#DCD7CE]">
+                Width: {scheduleDimensions.widthMeters} m ({scheduleDimensions.widthFeet} ft)
+              </span>
+              <span className="font-mono font-semibold text-[#5A5A40] bg-[#FAF8F5] px-2.5 py-1 rounded-lg border border-[#DCD7CE]">
+                Size: {scheduleDimensions.dimensionsMetric}
+              </span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3 text-[11px] text-[#6B6B58]">
+              <label className="flex items-center gap-1 cursor-pointer bg-[#FAF8F5] px-2 py-0.5 rounded border border-[#DCD7CE] text-[#33332A]">
+                <input
+                  id="chk-fullmap-grid"
+                  type="checkbox"
+                  checked={showGrid}
+                  onChange={(e) => setShowGrid(e.target.checked)}
+                  className="rounded text-natural-olive accent-[#5A5A40]"
+                />
+                <Grid className="w-3 h-3 text-[#5A5A40]" />
+                <span className="font-semibold">Survey Grid ({gridInterval}m)</span>
+              </label>
+
+              <label className="flex items-center gap-1 cursor-pointer bg-[#FAF8F5] px-2 py-0.5 rounded border border-[#DCD7CE] text-[#33332A]">
+                <input
+                  id="chk-fullmap-plain"
+                  type="checkbox"
+                  checked={showPlainStructure || activeLayer === 'plain'}
+                  onChange={(e) => setShowPlainStructure(e.target.checked)}
+                  className="rounded text-natural-olive accent-[#5A5A40]"
+                />
+                <Compass className="w-3 h-3 text-[#8B4513]" />
+                <span className="font-semibold">Plain Structure</span>
+              </label>
+
+              <span>Perimeter: <strong className="font-mono text-[#33332A]">{scheduleDimensions.perimeterMeters} m</strong></span>
+              <span>&bull;</span>
+              <span>Shape: <strong className="text-[#33332A]">{scheduleDimensions.shapeClassification}</strong></span>
+              <span>&bull;</span>
+              <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                All Roles Access
+              </span>
+            </div>
+          </div>
+
           <CadastralGoogleMapView
             plots={availablePlots}
             selectedPlot={currentPlot}
             onSelectPlot={handlePlotClick}
             activeLayer={activeLayer}
+            onLayerChange={setActiveLayer}
             cadastralOpacity={cadastralOpacity}
             onOpacityChange={setCadastralOpacity}
             showRoads={showRoads}
             showWaterbodies={showWaterbodies}
             showLabels={showLabels}
             onToggleLabels={() => setShowLabels(!showLabels)}
+            showGrid={showGrid}
+            onToggleGrid={() => setShowGrid(!showGrid)}
+            gridInterval={gridInterval}
+            onGridIntervalChange={setGridInterval}
+            showPlainStructure={showPlainStructure || activeLayer === 'plain'}
+            onTogglePlainStructure={() => setShowPlainStructure(!showPlainStructure)}
             heightClass="h-[620px]"
+            records={records}
           />
         </motion.div>
       )}
       </AnimatePresence>
+
+      {/* Cadastral Grid & Plain Structure Reference Guide (Available to All Roles) */}
+      <div className="bg-[#FAF8F5] rounded-xl border border-[#DCD7CE] p-4 text-xs text-[#4A3728] shadow-2xs">
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-2.5 border-b border-[#DCD7CE]">
+          <div className="flex items-center gap-2">
+            <div className="p-1 rounded bg-[#E5C37A]/30 text-[#8B4513]">
+              <Grid className="w-4 h-4" />
+            </div>
+            <div>
+              <h4 className="font-bold natural-serif text-[#33332A]">
+                Cadastral Survey Grid & Plain Structure Reference (भू-सर्वेक्षण ग्रिड एवं सादा संरचना)
+              </h4>
+              <p className="text-[11px] text-[#6B6B58]">
+                Accessible to All Roles (Revenue Officers, Surveyors, Verification Clerks, and Citizens)
+              </p>
+            </div>
+          </div>
+          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300 font-semibold">
+            Universal GIS Standard
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-3 text-[11px]">
+          <div className="p-2.5 rounded-lg bg-[#F5F3EE] border border-[#DCD7CE] space-y-1">
+            <div className="flex items-center gap-1.5 font-semibold text-[#33332A]">
+              <Grid className="w-3.5 h-3.5 text-[#5A5A40]" />
+              <span>Metric Coordinate Grid</span>
+            </div>
+            <p className="text-[#6B6B58] text-[10px] leading-relaxed">
+              Provides calibrated 25m, 50m, and 100m metric reference lines anchored to village benchmarks. Use grid squares to independently verify land length and width dimensions on the ground.
+            </p>
+          </div>
+
+          <div className="p-2.5 rounded-lg bg-[#F5F3EE] border border-[#DCD7CE] space-y-1">
+            <div className="flex items-center gap-1.5 font-semibold text-[#33332A]">
+              <LayoutGrid className="w-3.5 h-3.5 text-[#8B4513]" />
+              <span>Plain Structure (सादा संरचना)</span>
+            </div>
+            <p className="text-[#6B6B58] text-[10px] leading-relaxed">
+              A high-legibility untextured planimetric drafting sheet. Strips satellite clutter to reveal clean parcel outlines, boundary corner stones (चांदा/मुनारा), and triangulation diagonals (कर्ण रेखा).
+            </p>
+          </div>
+
+          <div className="p-2.5 rounded-lg bg-[#F5F3EE] border border-[#DCD7CE] space-y-1">
+            <div className="flex items-center gap-1.5 font-semibold text-[#33332A]">
+              <Ruler className="w-3.5 h-3.5 text-[#2E6F40]" />
+              <span>Land Schedule Verification</span>
+            </div>
+            <p className="text-[#6B6B58] text-[10px] leading-relaxed">
+              Edge dimension labels and floating Land Schedule HUD calculate length, width, perimeter, and shape for any selected parcel across all user views without role restrictions.
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

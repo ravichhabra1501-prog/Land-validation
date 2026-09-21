@@ -54,6 +54,9 @@ export const Navbar: React.FC<NavbarProps> = ({
     kannada: { native: 'ಕನ್ನಡ', english: 'Kannada' },
     telugu: { native: 'తెలుగు', english: 'Telugu' },
     tamil: { native: 'தமிழ்', english: 'Tamil' },
+    malayalam: { native: 'മലയാളം', english: 'Malayalam' },
+    odia: { native: 'ଓଡ଼ିଆ', english: 'Odia' },
+    assamese: { native: 'অসমীয়া', english: 'Assamese' },
     urdu: { native: 'اردو', english: 'Urdu' }
   };
 

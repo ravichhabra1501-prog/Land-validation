@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Building2, 
@@ -26,12 +26,30 @@ import {
   X,
   ShieldCheck,
   Check,
-  RotateCcw
+  RotateCcw,
+  Table,
+  LayoutGrid,
+  Landmark,
+  ChevronLeft,
+  ChevronsLeft,
+  ChevronsRight,
+  Eye,
+  SlidersHorizontal,
+  Maximize2,
+  Minimize2,
+  ArrowUpDown,
+  FileSpreadsheet,
+  ChevronDown
 } from 'lucide-react';
 import { ExtractedLandRecord, StateDigitizationProgress, AuthUser, VerificationStatus, RecordModificationEntry, IndicLanguage } from '../types';
 import { STATE_DIGITIZATION_DATA } from '../data/sampleRecords';
+import { getStateLandFormat, STATE_LAND_FORMATS } from '../data/stateLandFormats';
+import { exportLandRecordsToExcel, exportLandRecordsToCSV } from '../utils/excelExport';
 import { ArchivalPdfReportModal } from './ArchivalPdfReportModal';
 import { ValidationTrendSparkline, MicroSparkline } from './ValidationTrendSparkline';
+import { StateFormatsDirectoryModal } from './StateFormatsDirectoryModal';
+import { LandRecordLedgerTable } from './LandRecordLedgerTable';
+import { LandRecordCardGrid } from './LandRecordCardGrid';
 import { getTranslations } from '../utils/translations';
 
 interface DashboardViewProps {
@@ -57,6 +75,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const t = getTranslations(currentLang);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStateFilter, setSelectedStateFilter] = useState<string>('ALL');
+  const [selectedFormatFilter, setSelectedFormatFilter] = useState<string>('ALL');
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('ALL');
+  const [sortBy, setSortBy] = useState<'RECENT' | 'CONF_DESC' | 'CONF_ASC' | 'AREA_DESC' | 'KHASRA'>('RECENT');
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [itemsPerPage, setItemsPerPage] = useState<number>(15);
+  const [isFullWidthLedger, setIsFullWidthLedger] = useState<boolean>(false);
+  const [isFormatsDirectoryOpen, setIsFormatsDirectoryOpen] = useState<boolean>(false);
+  const [isExcelMenuOpen, setIsExcelMenuOpen] = useState<boolean>(false);
+
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [selectedRecordIds, setSelectedRecordIds] = useState<string[]>([]);
   const [confirmModalStatus, setConfirmModalStatus] = useState<VerificationStatus | null>(null);
@@ -70,16 +98,77 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     ? (records.reduce((acc, r) => acc + r.overallConfidence, 0) / records.length).toFixed(1)
     : '0.0';
 
-  const filteredRecords = records.filter(record => {
-    const matchesSearch = 
-      record.khasraNumber.value.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      record.village.value.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      record.primaryOwnerName.value.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      record.documentNumber.toLowerCase().includes(searchQuery.toLowerCase());
+  // Extract available unique state formats for filter dropdown
+  const availableFormats = useMemo(() => {
+    const set = new Set<string>();
+    records.forEach(r => {
+      const fmt = getStateLandFormat(r.state.value, r.documentType);
+      set.add(fmt.formatShort);
+    });
+    return Array.from(set).sort();
+  }, [records]);
 
-    const matchesState = selectedStateFilter === 'ALL' || record.state.value === selectedStateFilter;
-    return matchesSearch && matchesState;
-  });
+  // Master filtered and sorted records
+  const filteredRecords = useMemo(() => {
+    let result = records.filter(record => {
+      const format = getStateLandFormat(record.state.value, record.documentType);
+      const query = searchQuery.toLowerCase().trim();
+
+      const matchesSearch = !query ||
+        record.khasraNumber.value.toLowerCase().includes(query) ||
+        record.khataNumber.value.toLowerCase().includes(query) ||
+        record.village.value.toLowerCase().includes(query) ||
+        record.tehsil.value.toLowerCase().includes(query) ||
+        record.district.value.toLowerCase().includes(query) ||
+        record.state.value.toLowerCase().includes(query) ||
+        record.primaryOwnerName.value.toLowerCase().includes(query) ||
+        record.documentNumber.toLowerCase().includes(query) ||
+        format.formatTitle.toLowerCase().includes(query) ||
+        format.formatShort.toLowerCase().includes(query) ||
+        format.formCode.toLowerCase().includes(query) ||
+        format.portalName.toLowerCase().includes(query);
+
+      const matchesState = selectedStateFilter === 'ALL' || record.state.value.toLowerCase() === selectedStateFilter.toLowerCase();
+
+      const matchesFormat = selectedFormatFilter === 'ALL' || 
+        format.formatShort.toLowerCase() === selectedFormatFilter.toLowerCase() ||
+        format.state.toLowerCase() === selectedFormatFilter.toLowerCase();
+
+      const matchesStatus = selectedStatusFilter === 'ALL' || record.status === selectedStatusFilter;
+
+      return matchesSearch && matchesState && matchesFormat && matchesStatus;
+    });
+
+    // Sorting
+    result = [...result].sort((a, b) => {
+      if (sortBy === 'CONF_DESC') return b.overallConfidence - a.overallConfidence;
+      if (sortBy === 'CONF_ASC') return a.overallConfidence - b.overallConfidence;
+      if (sortBy === 'AREA_DESC') {
+        const aArea = a.normalizedAreaSqMeters || a.totalAreaDeclared.value;
+        const bArea = b.normalizedAreaSqMeters || b.totalAreaDeclared.value;
+        return bArea - aArea;
+      }
+      if (sortBy === 'KHASRA') {
+        return a.khasraNumber.value.localeCompare(b.khasraNumber.value, undefined, { numeric: true });
+      }
+      // Default: RECENT
+      return new Date(b.uploadedAt || 0).getTime() - new Date(a.uploadedAt || 0).getTime();
+    });
+
+    return result;
+  }, [records, searchQuery, selectedStateFilter, selectedFormatFilter, selectedStatusFilter, sortBy]);
+
+  // Pagination calculation
+  const totalFilteredCount = filteredRecords.length;
+  const effectivePerPage = itemsPerPage === -1 ? totalFilteredCount || 1 : itemsPerPage;
+  const totalPages = Math.max(1, Math.ceil(totalFilteredCount / effectivePerPage));
+  const safePage = Math.min(Math.max(1, currentPage), totalPages);
+
+  const paginatedRecords = useMemo(() => {
+    if (itemsPerPage === -1) return filteredRecords;
+    const start = (safePage - 1) * effectivePerPage;
+    return filteredRecords.slice(start, start + effectivePerPage);
+  }, [filteredRecords, safePage, effectivePerPage, itemsPerPage]);
 
   const isAllSelected = filteredRecords.length > 0 && filteredRecords.every(r => selectedRecordIds.includes(r.id));
   const isPartiallySelected = selectedRecordIds.length > 0 && !isAllSelected;
@@ -182,6 +271,39 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     setConfirmModalStatus(null);
     setOfficerRemark('');
     setSelectedRecordIds([]);
+  };
+
+  const handleExport = (format: 'xlsx' | 'csv') => {
+    setIsExcelMenuOpen(false);
+    const recordsToExport = selectedRecordIds.length > 0
+      ? filteredRecords.filter(r => selectedRecordIds.includes(r.id))
+      : filteredRecords;
+
+    if (recordsToExport.length === 0) {
+      setToastMessage('No land records found to export under current filters.');
+      setTimeout(() => setToastMessage(null), 3500);
+      return;
+    }
+
+    try {
+      if (format === 'xlsx') {
+        const filename = exportLandRecordsToExcel(recordsToExport, {
+          officer: currentUser,
+          stateFilter: selectedStateFilter,
+          formatFilter: selectedFormatFilter,
+          statusFilter: selectedStatusFilter,
+          searchQuery: searchQuery,
+        });
+        setToastMessage(`Downloaded ${recordsToExport.length} land records as Excel audit workbook (${filename})`);
+      } else {
+        const filename = exportLandRecordsToCSV(recordsToExport);
+        setToastMessage(`Downloaded ${recordsToExport.length} land records as CSV (${filename})`);
+      }
+    } catch (err) {
+      console.error('Audit export error:', err);
+      setToastMessage('Failed to generate export file. Please try again.');
+    }
+    setTimeout(() => setToastMessage(null), 4500);
   };
 
   return (
@@ -367,34 +489,225 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       />
 
       {/* Main Content Grid: Ingested Records Queue + State-wise Progress */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left 2 Cols: Ingestion & Verification Queue */}
-        <div className="lg:col-span-2 space-y-4">
-          <div className="bg-[#FAF8F5] rounded-xl border border-[#DCD7CE] p-5 shadow-2xs">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#DCD7CE]">
-              <div>
-                <h3 className="text-base font-bold text-[#33332A] natural-serif">Land Record Ingestion Queue</h3>
-                <p className="text-xs text-[#6B6B58]">Real-time status of digitized parcels, OCR confidence, and validation outcome</p>
+      <div className={`grid grid-cols-1 ${isFullWidthLedger ? 'lg:grid-cols-1' : 'lg:grid-cols-3'} gap-6`}>
+        {/* Left Cols: Ingestion & Verification Queue */}
+        <div className={`${isFullWidthLedger ? 'lg:col-span-1' : 'lg:col-span-2'} space-y-4`}>
+          <div className="bg-[#FAF8F5] rounded-xl border border-[#DCD7CE] p-4 sm:p-5 shadow-2xs">
+            <div className="flex flex-col gap-3 pb-4 border-b border-[#DCD7CE]">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-bold text-[#33332A] natural-serif">Land Record Ingestion Queue</h3>
+                    <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-[#EBE7DF] text-[#4A3728] border border-[#DCD7CE]">
+                      {filteredRecords.length} of {records.length} Parcels
+                    </span>
+                  </div>
+                  <p className="text-xs text-[#6B6B58] mt-0.5">
+                    Multi-state registry with statutory formats, OCR confidence, area metrics, and HITL verification
+                  </p>
+                </div>
+
+                {/* View Mode & Action Controls */}
+                <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+                  {/* Table vs Cards Toggle */}
+                  <div className="inline-flex rounded-lg border border-[#DCD7CE] bg-[#F5F3EE] p-0.5">
+                    <button
+                      onClick={() => setViewMode('table')}
+                      className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+                        viewMode === 'table'
+                          ? 'bg-[#FAF8F5] text-[#33332A] shadow-2xs font-bold'
+                          : 'text-[#6B6B58] hover:text-[#33332A]'
+                      }`}
+                      title="Ledger Table View"
+                    >
+                      <Table className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">Ledger Table</span>
+                    </button>
+                    <button
+                      onClick={() => setViewMode('cards')}
+                      className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+                        viewMode === 'cards'
+                          ? 'bg-[#FAF8F5] text-[#33332A] shadow-2xs font-bold'
+                          : 'text-[#6B6B58] hover:text-[#33332A]'
+                      }`}
+                      title="Card Grid View"
+                    >
+                      <LayoutGrid className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">Cards</span>
+                    </button>
+                  </div>
+
+                  {/* Full Width Toggle */}
+                  <button
+                    onClick={() => setIsFullWidthLedger(!isFullWidthLedger)}
+                    className="p-1.5 rounded-lg border border-[#DCD7CE] bg-[#F5F3EE] hover:bg-[#EBE7DF] text-[#5A5A40] transition-colors cursor-pointer hidden md:flex items-center gap-1 text-xs font-medium"
+                    title={isFullWidthLedger ? 'Exit Full-Width View' : 'Maximize Ledger to Full-Width'}
+                  >
+                    {isFullWidthLedger ? (
+                      <>
+                        <Minimize2 className="w-3.5 h-3.5" />
+                        <span className="text-[11px]">Split</span>
+                      </>
+                    ) : (
+                      <>
+                        <Maximize2 className="w-3.5 h-3.5" />
+                        <span className="text-[11px]">Expand</span>
+                      </>
+                    )}
+                  </button>
+
+                  {/* State Formats Guide Directory Button */}
+                  <button
+                    id="btn-open-state-formats-directory"
+                    onClick={() => setIsFormatsDirectoryOpen(true)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-[#FAF8F5] hover:bg-[#EBE7DF] text-[#8B4513] border border-[#DCD7CE] transition-colors cursor-pointer shadow-2xs"
+                    title="Explore state-wise land record formats, portal links, and statutory revenue acts"
+                  >
+                    <Landmark className="w-3.5 h-3.5 text-[#8B4513]" />
+                    <span className="font-bold">State Formats Guide</span>
+                  </button>
+
+                  {/* Export to Excel (.xlsx / .csv) Dropdown */}
+                  <div className="relative">
+                    <button
+                      id="btn-export-to-excel"
+                      onClick={() => setIsExcelMenuOpen(!isExcelMenuOpen)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-[#EAF2EB] hover:bg-[#D8E6DA] text-[#2F4732] border border-[#BCD4C0] transition-colors cursor-pointer shadow-2xs whitespace-nowrap"
+                      title="Export currently filtered land records to Excel (.xlsx) or CSV for offline statutory auditing"
+                    >
+                      <FileSpreadsheet className="w-3.5 h-3.5 text-[#3D5A40]" />
+                      <span className="font-bold">
+                        Export to Excel{' '}
+                        <span className="opacity-80 font-normal">
+                          {selectedRecordIds.length > 0
+                            ? `(${selectedRecordIds.length} selected)`
+                            : `(${filteredRecords.length})`}
+                        </span>
+                      </span>
+                      <ChevronDown className="w-3 h-3 text-[#3D5A40] transition-transform duration-200" style={{ transform: isExcelMenuOpen ? 'rotate(180deg)' : 'none' }} />
+                    </button>
+
+                    <AnimatePresence>
+                      {isExcelMenuOpen && (
+                        <>
+                          {/* Transparent click-away backdrop */}
+                          <div 
+                            className="fixed inset-0 z-40" 
+                            onClick={() => setIsExcelMenuOpen(false)} 
+                          />
+                          <motion.div
+                            id="menu-export-excel-dropdown"
+                            initial={{ opacity: 0, y: 6, scale: 0.97 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: 4, scale: 0.97 }}
+                            transition={{ duration: 0.15 }}
+                            className="absolute right-0 mt-1.5 w-72 bg-[#FAF8F5] rounded-xl border border-[#DCD7CE] shadow-2xl p-1.5 z-50 text-xs"
+                          >
+                            <div className="px-3 py-2 border-b border-[#DCD7CE]/60 text-[11px] text-[#6B6B58] bg-[#F5F3EE]/70 rounded-t-lg">
+                              <span className="font-bold text-[#33332A] natural-serif block text-xs">
+                                Offline Cadastral Audit Export
+                              </span>
+                              <span className="text-[11px] text-[#5A5A40]">
+                                {selectedRecordIds.length > 0
+                                  ? `Exporting ${selectedRecordIds.length} selected record(s)`
+                                  : `Exporting ${filteredRecords.length} filtered record(s)`}
+                              </span>
+                            </div>
+
+                            <div className="py-1 space-y-1">
+                              <button
+                                id="btn-download-xlsx"
+                                onClick={() => handleExport('xlsx')}
+                                className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-[#EAF2EB] text-[#33332A] flex items-center justify-between group transition-colors cursor-pointer"
+                              >
+                                <div className="flex items-center gap-2.5">
+                                  <div className="w-7 h-7 rounded-md bg-[#EAF2EB] border border-[#BCD4C0] flex items-center justify-center text-[#3D5A40] group-hover:bg-[#3D5A40] group-hover:text-white transition-colors">
+                                    <FileSpreadsheet className="w-4 h-4" />
+                                  </div>
+                                  <div>
+                                    <p className="font-bold text-[#2F4732]">Excel Workbook (.xlsx)</p>
+                                    <p className="text-[10px] text-[#6B6B58]">Multi-sheet: Audit Ledger + Summary</p>
+                                  </div>
+                                </div>
+                                <Download className="w-3.5 h-3.5 text-[#6B6B58] group-hover:text-[#3D5A40]" />
+                              </button>
+
+                              <button
+                                id="btn-download-csv"
+                                onClick={() => handleExport('csv')}
+                                className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-[#FFF9EA] text-[#33332A] flex items-center justify-between group transition-colors cursor-pointer"
+                              >
+                                <div className="flex items-center gap-2.5">
+                                  <div className="w-7 h-7 rounded-md bg-[#FFF9EA] border border-[#DCD7CE] flex items-center justify-center text-[#8B4513] group-hover:bg-[#8B4513] group-hover:text-white transition-colors">
+                                    <FileText className="w-4 h-4" />
+                                  </div>
+                                  <div>
+                                    <p className="font-bold text-[#4A3728]">CSV Audit Table (.csv)</p>
+                                    <p className="text-[10px] text-[#6B6B58]">UTF-8 with BOM (Indic scripts safe)</p>
+                                  </div>
+                                </div>
+                                <Download className="w-3.5 h-3.5 text-[#6B6B58] group-hover:text-[#8B4513]" />
+                              </button>
+                            </div>
+
+                            <div className="px-3 py-1.5 border-t border-[#DCD7CE]/60 text-[10px] text-[#8B4513] bg-[#FFF9EA]/50 rounded-b-lg flex items-center gap-1.5">
+                              <ShieldCheck className="w-3 h-3 text-[#8B4513] shrink-0" />
+                              <span>Includes DILRMP metadata and audit chain</span>
+                            </div>
+                          </motion.div>
+                        </>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+                  {/* Export Archival PDF */}
+                  <button
+                    id="btn-export-validation-summary-pdf"
+                    onClick={() => setIsReportModalOpen(true)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-[#EBE7DF] hover:bg-[#DCD7CE] text-[#33332A] border border-[#C4BDAF] transition-colors cursor-pointer shadow-2xs whitespace-nowrap"
+                    title="Export land record validation summary report as printable archival PDF"
+                  >
+                    <Printer className="w-3.5 h-3.5 text-[#5A5A40]" />
+                    <span className="hidden sm:inline">Export Archival PDF</span>
+                  </button>
+                </div>
               </div>
 
-              {/* Search & State Filter & Export Action */}
-              <div className="flex items-center gap-2 flex-wrap">
-                <div className="relative">
+              {/* Comprehensive Search & Filter Row */}
+              <div className="flex items-center gap-2 flex-wrap pt-1">
+                {/* Keyword Search */}
+                <div className="relative flex-1 min-w-[180px]">
                   <Search className="w-3.5 h-3.5 text-[#6B6B58] absolute left-2.5 top-2.5" />
                   <input
                     id="input-search-records"
                     type="text"
-                    placeholder={t.searchPlaceholder}
+                    placeholder="Search by Khasra, Khata, Village, Owner, State, or Format..."
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-8 pr-3 py-1.5 text-xs rounded-lg border border-[#DCD7CE] bg-[#F5F3EE] text-[#33332A] focus:bg-[#FAF8F5] focus:outline-hidden focus:ring-1 focus:ring-[#5A5A40] w-44 sm:w-52"
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="w-full pl-8 pr-6 py-1.5 text-xs rounded-lg border border-[#DCD7CE] bg-[#F5F3EE] text-[#33332A] focus:bg-[#FAF8F5] focus:outline-hidden focus:ring-1 focus:ring-[#5A5A40]"
                   />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-2.5 top-2 text-[#6B6B58] hover:text-[#33332A] text-xs cursor-pointer font-bold"
+                    >
+                      ×
+                    </button>
+                  )}
                 </div>
+
+                {/* State Filter */}
                 <select
                   aria-label="Filter records by state"
                   value={selectedStateFilter}
-                  onChange={(e) => setSelectedStateFilter(e.target.value)}
-                  className="text-xs rounded-lg border border-[#DCD7CE] bg-[#F5F3EE] px-2 py-1.5 text-[#33332A] cursor-pointer"
+                  onChange={(e) => {
+                    setSelectedStateFilter(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="text-xs rounded-lg border border-[#DCD7CE] bg-[#F5F3EE] px-2.5 py-1.5 text-[#33332A] cursor-pointer font-medium"
                 >
                   <option value="ALL">All States ({records.length})</option>
                   {Array.from(new Set(records.map((r) => r.state.value))).sort().map((st) => (
@@ -404,21 +717,75 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   ))}
                 </select>
 
-                <button
-                  id="btn-export-validation-summary-pdf"
-                  onClick={() => setIsReportModalOpen(true)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-[#EBE7DF] hover:bg-[#DCD7CE] text-[#33332A] border border-[#C4BDAF] transition-colors cursor-pointer shadow-2xs whitespace-nowrap"
-                  title="Export land record validation summary report as printable archival PDF"
+                {/* State Land Format Filter */}
+                <select
+                  aria-label="Filter records by statutory land format"
+                  value={selectedFormatFilter}
+                  onChange={(e) => {
+                    setSelectedFormatFilter(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="text-xs rounded-lg border border-[#DCD7CE] bg-[#F5F3EE] px-2.5 py-1.5 text-[#33332A] cursor-pointer font-medium"
                 >
-                  <Printer className="w-3.5 h-3.5 text-[#5A5A40]" />
-                  <span>Export Archival PDF</span>
-                </button>
+                  <option value="ALL">All Formats ({availableFormats.length})</option>
+                  {availableFormats.map((fmt) => (
+                    <option key={fmt} value={fmt}>
+                      {fmt}
+                    </option>
+                  ))}
+                </select>
+
+                {/* Verification Status Filter */}
+                <select
+                  aria-label="Filter records by verification status"
+                  value={selectedStatusFilter}
+                  onChange={(e) => {
+                    setSelectedStatusFilter(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="text-xs rounded-lg border border-[#DCD7CE] bg-[#F5F3EE] px-2.5 py-1.5 text-[#33332A] cursor-pointer font-medium"
+                >
+                  <option value="ALL">All Statuses</option>
+                  <option value="NEEDS_REVIEW">Needs Review ({needsReviewCount})</option>
+                  <option value="VERIFIED_AND_SANCTIONED">Sanctioned ({verifiedCount})</option>
+                </select>
+
+                {/* Sort dropdown */}
+                <select
+                  aria-label="Sort records"
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as any)}
+                  className="text-xs rounded-lg border border-[#DCD7CE] bg-[#F5F3EE] px-2.5 py-1.5 text-[#33332A] cursor-pointer font-medium"
+                >
+                  <option value="RECENT">Sort: Recently Ingested</option>
+                  <option value="CONF_DESC">Sort: Highest Confidence</option>
+                  <option value="CONF_ASC">Sort: Lowest Confidence</option>
+                  <option value="AREA_DESC">Sort: Largest Area</option>
+                  <option value="KHASRA">Sort: Khasra / Survey No.</option>
+                </select>
+
+                {/* Reset Filters button if active */}
+                {(selectedStateFilter !== 'ALL' || selectedFormatFilter !== 'ALL' || selectedStatusFilter !== 'ALL' || searchQuery) && (
+                  <button
+                    onClick={() => {
+                      setSelectedStateFilter('ALL');
+                      setSelectedFormatFilter('ALL');
+                      setSelectedStatusFilter('ALL');
+                      setSearchQuery('');
+                      setCurrentPage(1);
+                    }}
+                    className="inline-flex items-center gap-1 text-[11px] text-[#8B4513] hover:underline cursor-pointer font-semibold px-1 py-1"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    <span>Reset</span>
+                  </button>
+                )}
               </div>
             </div>
 
-            {/* Queue Batch Selection & Count Sub-bar */}
-            <div className="flex items-center justify-between py-2 px-3 bg-[#EBE7DF]/70 rounded-lg text-xs mt-3 border border-[#DCD7CE]">
-              <div className="flex items-center gap-2.5">
+            {/* Queue Batch Selection & Status Bar */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between py-2 px-3 bg-[#EBE7DF]/70 rounded-lg text-xs mt-3 border border-[#DCD7CE] gap-2">
+              <div className="flex items-center gap-2.5 flex-wrap">
                 <label className="inline-flex items-center gap-2 cursor-pointer select-none font-medium text-[#33332A]">
                   <input
                     type="checkbox"
@@ -436,123 +803,165 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         {selectedRecordIds.length} of {filteredRecords.length} selected
                       </span>
                     ) : (
-                      <span>Select all records in view ({filteredRecords.length})</span>
+                      <span>Select all in view ({filteredRecords.length})</span>
                     )}
                   </span>
                 </label>
 
                 {selectedRecordIds.length > 0 && (
-                  <button
-                    onClick={clearSelection}
-                    className="text-[11px] text-[#8B4513] hover:underline cursor-pointer font-medium ml-1"
-                  >
-                    Deselect all
-                  </button>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                      onClick={clearSelection}
+                      className="text-[11px] text-[#8B4513] hover:underline cursor-pointer font-medium"
+                    >
+                      Clear
+                    </button>
+                    <span className="text-[#C4BDAF]">|</span>
+                    <button
+                      onClick={() => handleOpenConfirmModal('VERIFIED_AND_SANCTIONED')}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-bold bg-[#3D5A40] text-white hover:bg-[#2F4732] transition-colors cursor-pointer shadow-2xs"
+                    >
+                      <ShieldCheck className="w-3 h-3" />
+                      <span>Sanction Selected ({selectedRecordIds.length})</span>
+                    </button>
+                    <button
+                      onClick={() => handleOpenConfirmModal('NEEDS_REVIEW')}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-bold bg-[#8B4513] text-white hover:bg-[#70380F] transition-colors cursor-pointer shadow-2xs"
+                    >
+                      <AlertTriangle className="w-3 h-3" />
+                      <span>Flag Review ({selectedRecordIds.length})</span>
+                    </button>
+                  </div>
                 )}
               </div>
 
-              <div className="flex items-center gap-2 text-[11px] text-[#6B6B58]">
+              <div className="flex items-center gap-2 text-[11px] text-[#6B6B58] self-end sm:self-auto">
                 <span>{needsReviewCount} pending review</span>
                 <span>•</span>
                 <span>{verifiedCount} sanctioned</span>
               </div>
             </div>
 
-            {/* List of records */}
-            <div className="divide-y divide-[#DCD7CE]/60 mt-2">
-              {filteredRecords.length === 0 ? (
-                <div className="text-center py-10 text-[#6B6B58] text-xs">
-                  No land records found matching the current search parameters.
-                </div>
+            {/* List / Table of records */}
+            <div className="mt-3">
+              {viewMode === 'table' ? (
+                <LandRecordLedgerTable
+                  records={paginatedRecords}
+                  selectedRecordIds={selectedRecordIds}
+                  onToggleSelectRecord={toggleRecordSelection}
+                  onSelectRecord={onSelectRecord}
+                  onOpenDirectoryModal={() => setIsFormatsDirectoryOpen(true)}
+                />
               ) : (
-                filteredRecords.map((record) => {
-                  const isVerified = record.status === 'VERIFIED_AND_SANCTIONED';
-                  const needsReview = record.status === 'NEEDS_REVIEW';
-                  const isSelected = selectedRecordIds.includes(record.id);
-
-                  return (
-                    <div
-                      key={record.id}
-                      onClick={() => onSelectRecord(record)}
-                      className={`py-3.5 px-2 rounded-lg transition-all cursor-pointer flex items-center justify-between gap-3 group ${
-                        isSelected 
-                          ? 'bg-[#FFF9EA] ring-1 ring-[#C4BDAF] shadow-2xs' 
-                          : 'hover:bg-[#EBE7DF]/60'
-                      }`}
-                    >
-                      <div className="flex items-start gap-2.5 min-w-0">
-                        {/* Checkbox for Bulk Selection */}
-                        <div 
-                          className="pt-1.5 pr-0.5 cursor-pointer text-[#5A5A40] shrink-0"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleRecordSelection(record.id);
-                          }}
-                          title={isSelected ? 'Deselect record' : 'Select record for bulk action'}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={() => {}} // handled by click container
-                            className="w-4 h-4 rounded text-[#5A5A40] accent-[#5A5A40] cursor-pointer"
-                            aria-label={`Select land record ${record.khasraNumber.value}`}
-                          />
-                        </div>
-
-                        <div className={`p-2 rounded-lg shrink-0 mt-0.5 ${
-                          isVerified 
-                            ? 'bg-[#EAF2EB] text-[#3D5A40] border border-[#BCD4C0]' 
-                            : 'bg-[#FFF9EA] text-[#8B4513] border border-[#DCD7CE]'
-                        }`}>
-                          <FileText className="w-4 h-4" />
-                        </div>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-sm font-bold text-[#33332A] group-hover:text-[#8B4513] transition-colors natural-serif">
-                              {record.khasraNumber.value} • {record.village.value}
-                            </span>
-                            <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-[#EBE7DF] text-[#4A3728]">
-                              {record.state.value}
-                            </span>
-                            <span className="text-[11px] text-[#6B6B58] font-mono">
-                              {record.documentNumber}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center gap-3 text-xs text-[#5A5A40] mt-1 flex-wrap">
-                            <span className="font-medium text-[#33332A]">
-                              <span className="natural-serif font-semibold text-[#5A5A40]">{t.ownerName}:</span> {record.primaryOwnerName.value}
-                            </span>
-                            <span>•</span>
-                            <span><span className="natural-serif font-semibold text-[#5A5A40]">{t.totalArea}:</span> {record.totalAreaDeclared.value} {record.declaredUnit.value.toLowerCase()}</span>
-                            <span>•</span>
-                            <span><span className="natural-serif font-semibold text-[#5A5A40]">Script:</span> {record.script}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-3 shrink-0">
-                        <div className="text-right hidden sm:block">
-                          <div className="text-xs font-bold text-[#33332A] flex items-center justify-end gap-1">
-                            <span>{record.overallConfidence}%</span>
-                            <span className="text-[10px] text-[#6B6B58] font-normal natural-serif">conf.</span>
-                          </div>
-                          <span className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full mt-0.5 ${
-                            isVerified 
-                              ? 'bg-[#EAF2EB] text-[#3D5A40] border border-[#BCD4C0]' 
-                              : 'bg-[#FFF9EA] text-[#8B4513] border border-[#DCD7CE]'
-                          }`}>
-                            {isVerified ? t.statusVerified : t.statusNeedsReview}
-                          </span>
-                        </div>
-
-                        <ChevronRight className="w-4 h-4 text-[#6B6B58] group-hover:text-[#8B4513] group-hover:translate-x-0.5 transition-all" />
-                      </div>
-                    </div>
-                  );
-                })
+                <LandRecordCardGrid
+                  records={paginatedRecords}
+                  selectedRecordIds={selectedRecordIds}
+                  onToggleSelectRecord={toggleRecordSelection}
+                  onSelectRecord={onSelectRecord}
+                  onOpenDirectoryModal={() => setIsFormatsDirectoryOpen(true)}
+                />
               )}
             </div>
+
+            {/* Pagination Controls */}
+            {totalFilteredCount > 0 && (
+              <div className="mt-4 pt-3 border-t border-[#DCD7CE] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-[#5A5A40]">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span>
+                    Showing <strong className="text-[#33332A]">{itemsPerPage === -1 ? 1 : ((safePage - 1) * itemsPerPage) + 1}</strong> to{' '}
+                    <strong className="text-[#33332A]">{itemsPerPage === -1 ? totalFilteredCount : Math.min(safePage * itemsPerPage, totalFilteredCount)}</strong> of{' '}
+                    <strong className="text-[#33332A]">{totalFilteredCount}</strong> records
+                    {totalFilteredCount !== records.length && (
+                      <span className="text-[#6B6B58] ml-1"> (filtered from {records.length})</span>
+                    )}
+                  </span>
+                  <span className="text-[#C4BDAF]">|</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[#6B6B58]">Per page:</span>
+                    <select
+                      aria-label="Records per page"
+                      value={itemsPerPage}
+                      onChange={(e) => {
+                        setItemsPerPage(Number(e.target.value));
+                        setCurrentPage(1);
+                      }}
+                      className="text-xs rounded border border-[#DCD7CE] bg-[#F5F3EE] px-1.5 py-0.5 text-[#33332A] cursor-pointer font-medium"
+                    >
+                      <option value={10}>10</option>
+                      <option value={15}>15</option>
+                      <option value={25}>25</option>
+                      <option value={50}>50</option>
+                      <option value={-1}>All ({totalFilteredCount})</option>
+                    </select>
+                  </div>
+                </div>
+
+                {itemsPerPage !== -1 && totalPages > 1 && (
+                  <div className="flex items-center gap-1 self-end sm:self-auto">
+                    <button
+                      onClick={() => setCurrentPage(1)}
+                      disabled={safePage === 1}
+                      className="p-1 rounded border border-[#DCD7CE] bg-[#F5F3EE] hover:bg-[#EBE7DF] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer text-[#33332A]"
+                      title="First Page"
+                    >
+                      <ChevronsLeft className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={safePage === 1}
+                      className="p-1 rounded border border-[#DCD7CE] bg-[#F5F3EE] hover:bg-[#EBE7DF] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer text-[#33332A]"
+                      title="Previous Page"
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                    </button>
+
+                    <div className="flex items-center gap-1 px-1">
+                      {Array.from({ length: Math.min(5, totalPages) }, (_, idx) => {
+                        let pageNum = idx + 1;
+                        if (totalPages > 5 && safePage > 3) {
+                          pageNum = safePage - 3 + idx;
+                          if (pageNum + (4 - idx) > totalPages) {
+                            pageNum = totalPages - 4 + idx;
+                          }
+                        }
+                        if (pageNum <= 0 || pageNum > totalPages) return null;
+                        const isActive = pageNum === safePage;
+                        return (
+                          <button
+                            key={pageNum}
+                            onClick={() => setCurrentPage(pageNum)}
+                            className={`w-6 h-6 rounded text-xs font-semibold flex items-center justify-center transition-colors cursor-pointer ${
+                              isActive
+                                ? 'bg-[#5A5A40] text-[#FAF8F5]'
+                                : 'border border-[#DCD7CE] bg-[#F5F3EE] hover:bg-[#EBE7DF] text-[#33332A]'
+                            }`}
+                          >
+                            {pageNum}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                      disabled={safePage === totalPages}
+                      className="p-1 rounded border border-[#DCD7CE] bg-[#F5F3EE] hover:bg-[#EBE7DF] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer text-[#33332A]"
+                      title="Next Page"
+                    >
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => setCurrentPage(totalPages)}
+                      disabled={safePage === totalPages}
+                      className="p-1 rounded border border-[#DCD7CE] bg-[#F5F3EE] hover:bg-[#EBE7DF] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer text-[#33332A]"
+                      title="Last Page"
+                    >
+                      <ChevronsRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* DILRMP Modernization Workflow Architecture in Natural Tones */}
@@ -927,6 +1336,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         records={records}
         currentUser={currentUser}
         selectedRecordIds={selectedRecordIds}
+      />
+
+      {/* State Land Record Formats Directory Modal */}
+      <StateFormatsDirectoryModal
+        isOpen={isFormatsDirectoryOpen}
+        onClose={() => setIsFormatsDirectoryOpen(false)}
+        records={records}
+        onSelectStateFilter={(stateName) => {
+          setSelectedStateFilter(stateName);
+          setCurrentPage(1);
+        }}
       />
     </div>
   );

@@ -122,3 +122,356 @@ export function calculatePerimeterMeters(coordinates: LatLngCoord[]): number {
   }
   return Math.round(total * 10) / 10;
 }
+
+export interface LandScheduleDimensions {
+  // Primary Dimensions
+  lengthMeters: number; // Average Length
+  lengthFeet: number;
+  widthMeters: number;  // Average Width
+  widthFeet: number;
+
+  // Traditional Indic Survey Units
+  lengthGatta: number; // 1 Gatta = 2.7432m (9 feet)
+  widthGatta: number;
+  lengthJarib: number; // 1 Jarib = 20.1168m (66 feet)
+  widthJarib: number;
+
+  // Formatted Strings for Quick Display
+  dimensionsMetric: string; // e.g. "177.1 m × 169.5 m"
+  dimensionsImperial: string; // e.g. "581.0 ft × 556.1 ft"
+  dimensionsTraditional: string; // e.g. "64.6 × 61.8 Gatta"
+
+  // Cardinal Edge Measurements
+  northEdgeMeters: number;
+  northEdgeFeet: number;
+  southEdgeMeters: number;
+  southEdgeFeet: number;
+  eastEdgeMeters: number;
+  eastEdgeFeet: number;
+  westEdgeMeters: number;
+  westEdgeFeet: number;
+
+  // Midpoints for on-map edge labeling
+  northMidpoint?: LatLngCoord;
+  southMidpoint?: LatLngCoord;
+  eastMidpoint?: LatLngCoord;
+  westMidpoint?: LatLngCoord;
+
+  // Summary Metrics
+  perimeterMeters: number;
+  perimeterFeet: number;
+  perimeterGatta: number;
+  aspectRatio: string;
+  shapeClassification: 'Regular Rectangular' | 'Trapezoidal Parcel' | 'Polygonal Holding';
+}
+
+/**
+ * Calculates accurate geodesic midpoint between two coordinates
+ */
+export function calculateSegmentMidpoint(c1: LatLngCoord, c2: LatLngCoord): LatLngCoord {
+  return {
+    lat: (c1.lat + c2.lat) / 2,
+    lng: (c1.lng + c2.lng) / 2
+  };
+}
+
+/**
+ * Derives comprehensive Land Schedule dimensions (Length, Width, Chauhaddi measurements)
+ * from polygon vertices according to National Land Record Modernization Programme standards.
+ */
+export function calculateLandScheduleDimensions(coordinates: LatLngCoord[]): LandScheduleDimensions {
+  if (!coordinates || coordinates.length < 3) {
+    return {
+      lengthMeters: 0,
+      lengthFeet: 0,
+      widthMeters: 0,
+      widthFeet: 0,
+      lengthGatta: 0,
+      widthGatta: 0,
+      lengthJarib: 0,
+      widthJarib: 0,
+      dimensionsMetric: '0 m × 0 m',
+      dimensionsImperial: '0 ft × 0 ft',
+      dimensionsTraditional: '0 × 0 Gatta',
+      northEdgeMeters: 0,
+      northEdgeFeet: 0,
+      southEdgeMeters: 0,
+      southEdgeFeet: 0,
+      eastEdgeMeters: 0,
+      eastEdgeFeet: 0,
+      westEdgeMeters: 0,
+      westEdgeFeet: 0,
+      perimeterMeters: 0,
+      perimeterFeet: 0,
+      perimeterGatta: 0,
+      aspectRatio: '1.00 : 1',
+      shapeClassification: 'Polygonal Holding'
+    };
+  }
+
+  const segments = calculateBoundarySegments(coordinates);
+  const n = coordinates.length;
+
+  const northSeg = segments[0];
+  const eastSeg = segments[1];
+  const southSeg = segments[2];
+  const westSeg = segments[3];
+
+  const northM = northSeg ? northSeg.lengthMeters : 0;
+  const eastM = eastSeg ? eastSeg.lengthMeters : 0;
+  const southM = southSeg ? southSeg.lengthMeters : northM;
+  const westM = westSeg ? westSeg.lengthMeters : eastM;
+
+  // In Indian cadastral practice, average North/South and East/West
+  const avgNS = Math.round(((northM + southM) / 2) * 10) / 10;
+  const avgEW = Math.round(((eastM + westM) / 2) * 10) / 10;
+
+  // The longer dimension is conventionally designated as Length (लंबाई) and shorter as Width (चौड़ाई)
+  const isNSLonger = avgNS >= avgEW;
+  const lengthMeters = isNSLonger ? avgNS : avgEW;
+  const widthMeters = isNSLonger ? avgEW : avgNS;
+
+  const mToFt = (m: number) => Math.round(m * 3.28084 * 10) / 10;
+  const mToGatta = (m: number) => Math.round((m / 2.7432) * 10) / 10;
+  const mToJarib = (m: number) => Math.round((m / 20.1168) * 100) / 100;
+
+  const perimeterMeters = calculatePerimeterMeters(coordinates);
+  const perimeterFeet = mToFt(perimeterMeters);
+
+  const nsVariance = Math.abs(northM - southM) / (northM || 1);
+  const ewVariance = Math.abs(eastM - westM) / (eastM || 1);
+  let shape: 'Regular Rectangular' | 'Trapezoidal Parcel' | 'Polygonal Holding' = 'Regular Rectangular';
+  if (nsVariance > 0.08 || ewVariance > 0.08) {
+    shape = 'Trapezoidal Parcel';
+  }
+  if (n > 4) {
+    shape = 'Polygonal Holding';
+  }
+
+  const ratio = widthMeters > 0 ? (lengthMeters / widthMeters).toFixed(2) : '1.00';
+
+  return {
+    lengthMeters,
+    lengthFeet: mToFt(lengthMeters),
+    widthMeters,
+    widthFeet: mToFt(widthMeters),
+    lengthGatta: mToGatta(lengthMeters),
+    widthGatta: mToGatta(widthMeters),
+    lengthJarib: mToJarib(lengthMeters),
+    widthJarib: mToJarib(widthMeters),
+    dimensionsMetric: `${lengthMeters.toFixed(1)} m × ${widthMeters.toFixed(1)} m`,
+    dimensionsImperial: `${mToFt(lengthMeters).toFixed(1)} ft × ${mToFt(widthMeters).toFixed(1)} ft`,
+    dimensionsTraditional: `${mToGatta(lengthMeters).toFixed(1)} × ${mToGatta(widthMeters).toFixed(1)} Gatta`,
+    northEdgeMeters: northM,
+    northEdgeFeet: mToFt(northM),
+    southEdgeMeters: southM,
+    southEdgeFeet: mToFt(southM),
+    eastEdgeMeters: eastM,
+    eastEdgeFeet: mToFt(eastM),
+    westEdgeMeters: westM,
+    westEdgeFeet: mToFt(westM),
+    northMidpoint: northSeg ? calculateSegmentMidpoint(northSeg.startPoint, northSeg.endPoint) : undefined,
+    eastMidpoint: eastSeg ? calculateSegmentMidpoint(eastSeg.startPoint, eastSeg.endPoint) : undefined,
+    southMidpoint: southSeg ? calculateSegmentMidpoint(southSeg.startPoint, southSeg.endPoint) : undefined,
+    westMidpoint: westSeg ? calculateSegmentMidpoint(westSeg.startPoint, westSeg.endPoint) : undefined,
+    perimeterMeters,
+    perimeterFeet,
+    perimeterGatta: mToGatta(perimeterMeters),
+    aspectRatio: `${ratio} : 1`,
+    shapeClassification: shape
+  };
+}
+
+export type LandType = 'GOVERNMENT' | 'PRIVATE' | 'COMMON';
+
+export interface LandTypeMeta {
+  type: LandType;
+  label: string;
+  indicLabel: string;
+  description: string;
+  colorHex: string;
+  badgeBg: string;
+  badgeText: string;
+  badgeBorder: string;
+}
+
+export const LAND_TYPE_CONFIG: Record<LandType, LandTypeMeta> = {
+  GOVERNMENT: {
+    type: 'GOVERNMENT',
+    label: 'Government Land',
+    indicLabel: 'सरकारी भूमि (शासकीय)',
+    description: 'Reserved for state departments, forest, public works, railways, or government assets',
+    colorHex: '#D97706', // Amber / Gold
+    badgeBg: '#FEF3C7',
+    badgeText: '#92400E',
+    badgeBorder: '#FCD34D'
+  },
+  PRIVATE: {
+    type: 'PRIVATE',
+    label: 'Private Land',
+    indicLabel: 'निजी खातेदार (रैयती)',
+    description: 'Individual or family agricultural, residential, or commercial freehold landholdings',
+    colorHex: '#16A34A', // Green
+    badgeBg: '#DCFCE7',
+    badgeText: '#166534',
+    badgeBorder: '#86EFAC'
+  },
+  COMMON: {
+    type: 'COMMON',
+    label: 'Common / Community Land',
+    indicLabel: 'सार्वजनिक / शामलात (गोचर)',
+    description: 'Gram Panchayat common land, Shamlat Deh, Gochar grazing, village pond/waterbody, or cremation ground',
+    colorHex: '#0284C7', // Sky Blue
+    badgeBg: '#E0F2FE',
+    badgeText: '#075985',
+    badgeBorder: '#7DD3FC'
+  }
+};
+
+/**
+ * Classifies a cadastral parcel into Government, Private, or Common Land
+ */
+export function getPlotLandType(plot: {
+  owner?: string;
+  status?: string;
+  soil?: string;
+}): LandType {
+  const ownerLower = (plot.owner || '').toLowerCase();
+  const statusLower = (plot.status || '').toLowerCase();
+
+  // 1. Common / Community Land Check
+  if (
+    ownerLower.includes('gram panchayat') ||
+    ownerLower.includes('gaon sabha') ||
+    ownerLower.includes('shamlat') ||
+    ownerLower.includes('gochar') ||
+    ownerLower.includes('oran') ||
+    ownerLower.includes('common') ||
+    ownerLower.includes('gair mumkin') ||
+    ownerLower.includes('gam talav') ||
+    ownerLower.includes('pokhari') ||
+    ownerLower.includes('drainage') ||
+    ownerLower.includes('community')
+  ) {
+    return 'COMMON';
+  }
+
+  // 2. Government Land Check
+  if (
+    ownerLower.includes('forest') ||
+    ownerLower.includes('shaskiya') ||
+    ownerLower.includes('government') ||
+    ownerLower.includes('govt') ||
+    ownerLower.includes('pwd') ||
+    ownerLower.includes('railway') ||
+    ownerLower.includes('department') ||
+    statusLower === 'govt_reserve'
+  ) {
+    return 'GOVERNMENT';
+  }
+
+  // 3. Default: Private Landholding
+  return 'PRIVATE';
+}
+
+export type DisplayValidationStatus = 
+  | 'VERIFIED_AND_SANCTIONED'
+  | 'PARTIALLY_VERIFIED'
+  | 'NEEDS_REVIEW'
+  | 'PENDING_EXTRACTION'
+  | 'LITIGATION';
+
+export interface ValidationStatusMeta {
+  status: DisplayValidationStatus;
+  label: string;
+  indicLabel: string;
+  colorHex: string;
+  badgeBg: string;
+  badgeText: string;
+  badgeBorder: string;
+  description: string;
+}
+
+export const VALIDATION_STATUS_CONFIG: Record<DisplayValidationStatus, ValidationStatusMeta> = {
+  VERIFIED_AND_SANCTIONED: {
+    status: 'VERIFIED_AND_SANCTIONED',
+    label: 'Verified & Sanctioned',
+    indicLabel: 'सत्यापित एवं स्वीकृत',
+    colorHex: '#16A34A',
+    badgeBg: '#DCFCE7',
+    badgeText: '#166534',
+    badgeBorder: '#86EFAC',
+    description: 'Clean title, passed all arithmetic and boundary reconciliation audits'
+  },
+  PARTIALLY_VERIFIED: {
+    status: 'PARTIALLY_VERIFIED',
+    label: 'Partially Verified',
+    indicLabel: 'आंशिक सत्यापित',
+    colorHex: '#0284C7',
+    badgeBg: '#E0F2FE',
+    badgeText: '#075985',
+    badgeBorder: '#7DD3FC',
+    description: 'Core metadata confirmed; awaiting secondary survey or mutation clearance'
+  },
+  NEEDS_REVIEW: {
+    status: 'NEEDS_REVIEW',
+    label: 'Needs Review',
+    indicLabel: 'पुनरीक्षण आवश्यक',
+    colorHex: '#D97706',
+    badgeBg: '#FEF3C7',
+    badgeText: '#92400E',
+    badgeBorder: '#FCD34D',
+    description: 'Flagged for surveyor inspection due to area delta or OCR discrepancy'
+  },
+  PENDING_EXTRACTION: {
+    status: 'PENDING_EXTRACTION',
+    label: 'Pending Extraction',
+    indicLabel: 'प्रतीक्षारत',
+    colorHex: '#64748B',
+    badgeBg: '#F1F5F9',
+    badgeText: '#334155',
+    badgeBorder: '#CBD5E1',
+    description: 'Queued for OCR/HWR extraction and schema parsing'
+  },
+  LITIGATION: {
+    status: 'LITIGATION',
+    label: 'Disputed / In Litigation',
+    indicLabel: 'विवादित / न्यायालय स्थगन',
+    colorHex: '#DC2626',
+    badgeBg: '#FEE2E2',
+    badgeText: '#991B1B',
+    badgeBorder: '#FCA5A5',
+    description: 'Active injunction, stay order, partition dispute, or encroachment flagged'
+  }
+};
+
+/**
+ * Resolves the effective validation status for a plot
+ */
+export function getPlotValidationStatus(
+  plot: { khasra: string; village: string; recordId?: string | null; status?: string },
+  records: Array<{ id: string; village?: { value: string }; khasraNumber?: { value: string }; status?: string }>
+): DisplayValidationStatus {
+  // Check matching digitized record first
+  const matched = records.find(
+    (r) => 
+      (r.village?.value === plot.village && r.khasraNumber?.value === plot.khasra) || 
+      (plot.recordId && r.id === plot.recordId)
+  );
+
+  if (matched?.status) {
+    if (matched.status === 'VERIFIED_AND_SANCTIONED') return 'VERIFIED_AND_SANCTIONED';
+    if (matched.status === 'PARTIALLY_VERIFIED') return 'PARTIALLY_VERIFIED';
+    if (matched.status === 'NEEDS_REVIEW') return 'NEEDS_REVIEW';
+    if (matched.status === 'PENDING_EXTRACTION' || matched.status === 'PROCESSING') return 'PENDING_EXTRACTION';
+    if (matched.status === 'REJECTED') return 'LITIGATION';
+  }
+
+  // Fallback to plot's spatial status
+  if (plot.status === 'LITIGATION') return 'LITIGATION';
+  if (plot.status === 'ENCROACHMENT_SUSPECTED') return 'NEEDS_REVIEW';
+  if (plot.status === 'GOVT_RESERVE') return 'VERIFIED_AND_SANCTIONED';
+  return 'VERIFIED_AND_SANCTIONED';
+}
+
+
