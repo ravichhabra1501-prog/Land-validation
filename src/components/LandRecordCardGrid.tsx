@@ -31,10 +31,10 @@ export const LandRecordCardGrid: React.FC<LandRecordCardGridProps> = ({
 }) => {
   if (records.length === 0) {
     return (
-      <div className="text-center py-12 px-4 text-[#6B6B58] text-xs">
-        <Landmark className="w-8 h-8 mx-auto text-[#C4BDAF] mb-2" />
-        <p className="font-semibold text-[#33332A] text-sm">No land records found</p>
-        <p className="text-[#6B6B58] mt-1">Try adjusting your state filter, search keywords, or format criteria.</p>
+      <div className="text-center py-12 px-4 text-slate-400 text-xs bg-[#090E1A]/80 rounded-xl border border-slate-800">
+        <Landmark className="w-8 h-8 mx-auto text-slate-600 mb-2" />
+        <p className="font-semibold text-slate-200 text-sm">No land records found</p>
+        <p className="text-slate-400 mt-1">Try adjusting your state filter, search keywords, or format criteria.</p>
       </div>
     );
   }
@@ -51,15 +51,15 @@ export const LandRecordCardGrid: React.FC<LandRecordCardGridProps> = ({
           <div
             key={record.id}
             onClick={() => onSelectRecord(record)}
-            className={`p-4 rounded-xl border transition-all cursor-pointer flex flex-col justify-between group ${
+            className={`p-4 rounded-xl border transition-all cursor-pointer flex flex-col justify-between group backdrop-blur-md ${
               isSelected
-                ? 'bg-[#FFF9EA] border-[#C4BDAF] ring-1 ring-[#C4BDAF] shadow-xs'
-                : 'bg-[#FAF8F5] border-[#DCD7CE] hover:border-[#C4BDAF] hover:shadow-xs'
+                ? 'bg-[#0F1B38]/90 border-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.3)] ring-1 ring-cyan-400/50'
+                : 'bg-[#090E1A]/90 border-slate-800 hover:border-cyan-500/50 hover:shadow-[0_0_20px_rgba(6,182,212,0.15)]'
             }`}
           >
             {/* Card Header with State Land Format Pill & Selection */}
             <div>
-              <div className="flex items-start justify-between gap-2 pb-2.5 border-b border-[#DCD7CE]/60">
+              <div className="flex items-start justify-between gap-2 pb-2.5 border-b border-slate-800">
                 <div className="flex items-start gap-2">
                   <div
                     onClick={(e) => {
@@ -73,122 +73,111 @@ export const LandRecordCardGrid: React.FC<LandRecordCardGridProps> = ({
                       type="checkbox"
                       checked={isSelected}
                       onChange={() => {}}
-                      className="w-4 h-4 rounded text-[#5A5A40] accent-[#5A5A40] cursor-pointer"
+                      className="w-4 h-4 rounded text-cyan-500 accent-cyan-500 cursor-pointer bg-slate-900 border-slate-700"
                     />
                   </div>
 
                   <div>
                     {/* Official State Format Badge */}
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-xs font-bold text-[#33332A] natural-serif">
+                      <span className="text-xs font-bold text-slate-100 natural-serif">
                         {record.state.value}
                       </span>
                       <span 
-                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold border ${format.badgeBg} ${format.badgeText} ${format.badgeBorder}`}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-cyan-950/80 text-cyan-300 border border-cyan-500/40 font-mono shadow-[0_0_8px_rgba(6,182,212,0.15)]"
                         title={`${format.statutoryAct} • ${format.portalUrl}`}
                       >
-                        <Landmark className="w-2.5 h-2.5 shrink-0" />
+                        <Landmark className="w-2.5 h-2.5 shrink-0 text-cyan-400" />
                         <span>{format.formatShort}</span>
                       </span>
                     </div>
-                    <p className="text-[10px] text-[#6B6B58] font-mono mt-0.5">
+                    <p className="text-[10px] text-slate-400 font-mono mt-0.5">
                       {format.formCode}
                     </p>
                   </div>
                 </div>
 
                 {/* Status Badge */}
-                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold font-mono ${
                   isVerified
-                    ? 'bg-[#EAF2EB] text-[#3D5A40] border border-[#BCD4C0]'
-                    : 'bg-[#FFF9EA] text-[#8B4513] border border-[#DCD7CE]'
+                    ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 shadow-[0_0_8px_rgba(16,185,129,0.2)]'
+                    : 'bg-amber-950/80 text-amber-300 border border-amber-500/40 shadow-[0_0_8px_rgba(245,158,11,0.2)]'
                 }`}>
                   {isVerified ? (
                     <>
-                      <ShieldCheck className="w-3 h-3 text-[#3D5A40]" />
+                      <ShieldCheck className="w-3 h-3 text-emerald-400" />
                       <span>Sanctioned</span>
                     </>
                   ) : (
                     <>
-                      <AlertTriangle className="w-3 h-3 text-[#8B4513]" />
-                      <span>Pending Review</span>
+                      <AlertTriangle className="w-3 h-3 text-amber-400" />
+                      <span>Review</span>
                     </>
                   )}
                 </span>
               </div>
 
-              {/* Main Parcel Details */}
-              <div className="mt-3 space-y-2 text-xs">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-bold text-[#33332A] group-hover:text-[#8B4513] transition-colors natural-serif">
-                    Khasra {record.khasraNumber.value}
+              {/* Record Key Details */}
+              <div className="pt-3 space-y-2 text-xs">
+                <div className="flex items-baseline justify-between">
+                  <span className="font-mono text-xs font-bold text-cyan-300 group-hover:text-cyan-200 transition-colors">
+                    {record.documentNumber}
                   </span>
-                  <span className="text-[11px] font-mono text-[#6B6B58]">
-                    Khata #{record.khataNumber.value}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-1.5 text-xs text-[#5A5A40]">
-                  <MapPin className="w-3 h-3 text-[#6B6B58] shrink-0" />
-                  <span className="font-medium text-[#33332A] truncate">
-                    {record.village.value}, {record.tehsil.value}, {record.district.value}
+                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${
+                    record.overallConfidence >= 90
+                      ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/40'
+                      : 'bg-amber-950/80 text-amber-300 border border-amber-500/40'
+                  }`}>
+                    {record.overallConfidence}% AI
                   </span>
                 </div>
 
-                <div className="bg-[#F5F3EE] p-2 rounded-lg border border-[#DCD7CE]/70 text-[11px] space-y-1">
-                  <div className="flex justify-between items-baseline">
-                    <span className="text-[#6B6B58]">Pattadar / Owner:</span>
-                    <span className="font-bold text-[#33332A] truncate max-w-[170px]">
-                      {record.primaryOwnerName.value}
-                    </span>
+                <div className="bg-[#0D152A] p-2.5 rounded-lg border border-slate-800 space-y-1.5">
+                  <div className="flex items-center justify-between text-slate-300">
+                    <span className="text-slate-400">Parcel / Khasra:</span>
+                    <span className="font-bold text-slate-100 font-mono">{record.khasraNumber.value}</span>
                   </div>
-                  <div className="flex justify-between items-baseline">
-                    <span className="text-[#6B6B58]">Declared Area:</span>
-                    <span className="font-semibold text-[#33332A]">
-                      {record.totalAreaDeclared.value} {record.declaredUnit.value}
-                      {record.normalizedAreaSqMeters && (
-                        <span className="text-[#6B6B58] font-normal text-[10px] ml-1">
-                          ({record.normalizedAreaSqMeters.toLocaleString()} m²)
-                        </span>
-                      )}
-                    </span>
+                  <div className="flex items-center justify-between text-slate-300">
+                    <span className="text-slate-400">Khata Roll:</span>
+                    <span className="font-medium text-slate-200 font-mono">{record.khataNumber.value}</span>
                   </div>
-                  <div className="flex justify-between items-baseline">
-                    <span className="text-[#6B6B58]">Lien / Mortgage:</span>
-                    {hasLien ? (
-                      <span className="text-[#8B4513] font-semibold text-[10px] truncate max-w-[160px]">
-                        ⚠️ {record.encumbranceStatus.value.replace(/_/g, ' ')}
-                      </span>
-                    ) : (
-                      <span className="text-[#3D5A40] font-medium text-[10px]">
-                        ✓ Clear / Nil
-                      </span>
-                    )}
+                  <div className="flex items-center justify-between text-slate-300">
+                    <span className="text-slate-400">Primary Holder:</span>
+                    <span className="font-semibold text-slate-100 truncate max-w-[150px]">{record.primaryOwnerName.value}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between text-[11px] pt-1 text-slate-400">
+                  <div className="flex items-center gap-1 truncate max-w-[170px]">
+                    <MapPin className="w-3 h-3 text-cyan-400 shrink-0" />
+                    <span>{record.village.value}, {record.district.value}</span>
+                  </div>
+                  <div className="font-bold text-slate-200 font-mono">
+                    {record.totalAreaDeclared.value} {record.declaredUnit.value}
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Card Footer with OCR Confidence & Action */}
-            <div className="mt-3 pt-2.5 border-t border-[#DCD7CE]/60 flex items-center justify-between text-[11px]">
-              <div className="flex items-center gap-2">
-                <span className={`px-1.5 py-0.2 rounded font-bold text-[10px] ${
-                  record.overallConfidence >= 90
-                    ? 'bg-[#EAF2EB] text-[#3D5A40] border border-[#BCD4C0]'
-                    : record.overallConfidence >= 75
-                    ? 'bg-[#FFF9EA] text-[#8B4513] border border-[#DCD7CE]'
-                    : 'bg-[#FDF0ED] text-[#8B0000] border border-[#F2C2BA]'
-                }`}>
-                  {record.overallConfidence}% OCR
-                </span>
-                <span className="text-[10px] text-[#6B6B58] font-mono">
-                  {record.documentNumber.slice(-10)}
-                </span>
+            {/* Footer Lien status & Action */}
+            <div className="mt-3 pt-2.5 border-t border-slate-800 flex items-center justify-between text-xs">
+              <div>
+                {hasLien ? (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-400 font-mono">
+                    <AlertTriangle className="w-3 h-3" />
+                    <span className="truncate max-w-[140px]">{record.encumbranceStatus.value.replace(/_/g, ' ')}</span>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-400 font-mono">
+                    <CheckCircle2 className="w-3 h-3" />
+                    <span>Clear Freehold</span>
+                  </span>
+                )}
               </div>
 
-              <div className="flex items-center gap-1 text-[#8B4513] font-semibold text-xs group-hover:translate-x-0.5 transition-transform">
-                <span>Inspect Record</span>
-                <ChevronRight className="w-3.5 h-3.5" />
+              <div className="inline-flex items-center gap-1 text-cyan-400 group-hover:text-cyan-300 font-medium text-[11px]">
+                <span>Inspect</span>
+                <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
               </div>
             </div>
           </div>

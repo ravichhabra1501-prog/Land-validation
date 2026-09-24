@@ -2,99 +2,198 @@
 @import "leaflet/dist/leaflet.css";
 
 @theme {
-  --font-serif: Georgia, Cambria, "Times New Roman", Times, serif;
+  --font-serif: "Space Grotesk", system-ui, -apple-system, sans-serif;
   --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-hud: "Rajdhani", "Space Grotesk", sans-serif;
 
-  --color-natural-bg: #f5f5f0;
-  --color-natural-surface: #FAF8F5;
-  --color-natural-card: #EBE7DF;
-  --color-natural-warm: #FFF9EA;
-  --color-natural-olive: #5A5A40;
-  --color-natural-olive-dark: #43432F;
-  --color-natural-olive-light: #707052;
-  --color-natural-border: #DCD7CE;
-  --color-natural-border-dark: #C4BDAF;
-  --color-natural-brown: #8B4513;
-  --color-natural-earth: #4A3728;
-  --color-natural-rust: #8B0000;
-  --color-natural-forest: #3D5A40;
-  --color-natural-text: #33332A;
-  --color-natural-muted: #6B6B58;
+  /* Remapped Natural-Tones to Dark Cyber/Geospatial Quantum Palette for backwards compatibility */
+  --color-natural-bg: #070A12;
+  --color-natural-surface: #0E1526;
+  --color-natural-card: #141E33;
+  --color-natural-warm: #18233C;
+  --color-natural-olive: #06B6D4;
+  --color-natural-olive-dark: #0891B2;
+  --color-natural-olive-light: #22D3EE;
+  --color-natural-border: #1E293B;
+  --color-natural-border-dark: #334155;
+  --color-natural-brown: #38BDF8;
+  --color-natural-earth: #E2E8F0;
+  --color-natural-rust: #F43F5E;
+  --color-natural-forest: #10B981;
+  --color-natural-text: #F8FAFC;
+  --color-natural-muted: #94A3B8;
+
+  /* Explicit Cyber / Aerospace Futuristic Tokens */
+  --color-cyber-obsidian: #05070D;
+  --color-cyber-canvas: #070A12;
+  --color-cyber-surface: #0E1526;
+  --color-cyber-card: #131D33;
+  --color-cyber-panel: #18243E;
+  --color-cyber-border: #1E2E4E;
+  --color-cyber-border-glow: rgba(6, 182, 212, 0.35);
+  
+  --color-neon-cyan: #00F0FF;
+  --color-neon-emerald: #10B981;
+  --color-neon-amber: #F59E0B;
+  --color-neon-rose: #F43F5E;
+  --color-neon-blue: #38BDF8;
+  --color-neon-violet: #818CF8;
 }
 
 :root {
-  --bg-canvas: #f5f5f0;
-  --bg-surface: #FAF8F5;
-  --bg-card: #EBE7DF;
-  --bg-warm: #FFF9EA;
-  --color-olive: #5A5A40;
-  --color-olive-dark: #43432F;
-  --color-brown: #8B4513;
-  --color-earth: #4A3728;
-  --color-rust: #8B0000;
-  --color-forest: #3D5A40;
-  --border-natural: #DCD7CE;
+  --bg-canvas: #070A12;
+  --bg-surface: #0E1526;
+  --bg-card: #131D33;
+  --bg-warm: #18243E;
+  --color-olive: #06B6D4;
+  --color-olive-dark: #0891B2;
+  --color-brown: #38BDF8;
+  --color-earth: #E2E8F0;
+  --color-rust: #F43F5E;
+  --color-forest: #10B981;
+  --border-natural: #1E2E4E;
 }
 
 body {
-  background-color: #f5f5f0;
-  color: #33332A;
+  background-color: #070A12;
+  color: #F1F5F9;
   font-family: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+  background-image: 
+    radial-gradient(circle at 50% 0%, rgba(6, 182, 212, 0.08) 0%, transparent 65%),
+    radial-gradient(circle at 100% 100%, rgba(16, 185, 129, 0.05) 0%, transparent 50%),
+    linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 48px 48px, 48px 48px;
+  background-position: center top, center bottom, center center, center center;
+  min-height: 100vh;
 }
 
-/* Custom Natural Tones utilities */
+/* Futuristic HUD & Cyber Typography */
 .natural-serif {
-  font-family: Georgia, Cambria, "Times New Roman", Times, serif;
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  letter-spacing: -0.02em;
 }
 
-.bg-natural-olive {
-  background-color: #5A5A40;
+.font-telemetry {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
 }
 
-.hover\:bg-natural-olive-dark:hover {
-  background-color: #43432F;
+.font-hud {
+  font-family: "Rajdhani", "Space Grotesk", sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
-.text-natural-olive {
-  color: #5A5A40;
+/* Cyber Surface & Glassmorphic Utilities */
+.cyber-glass {
+  background: rgba(14, 21, 38, 0.78);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(56, 189, 248, 0.16);
 }
 
-.border-natural-olive {
-  border-color: #5A5A40;
+.cyber-card {
+  background: rgba(15, 24, 43, 0.85);
+  border: 1px solid rgba(34, 48, 80, 0.9);
+  position: relative;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Modern Animations & Micro-interactions */
+.cyber-card:hover {
+  border-color: rgba(6, 182, 212, 0.4);
+  box-shadow: 0 0 25px -5px rgba(6, 182, 212, 0.15), 0 10px 20px -5px rgba(0, 0, 0, 0.5);
+  transform: translateY(-2px);
+}
+
+.cyber-glow-cyan {
+  box-shadow: 0 0 20px -3px rgba(6, 182, 212, 0.35);
+}
+
+.cyber-glow-emerald {
+  box-shadow: 0 0 20px -3px rgba(16, 185, 129, 0.35);
+}
+
+.cyber-glow-amber {
+  box-shadow: 0 0 20px -3px rgba(245, 158, 11, 0.35);
+}
+
+/* Subtle holographic scanline overlay */
+.cyber-scanlines {
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.15),
+    rgba(0, 0, 0, 0.15) 1px,
+    transparent 1px,
+    transparent 2px
+  );
+  pointer-events: none;
+}
+
+/* HUD Corner Brackets */
+.hud-corner {
+  position: relative;
+}
+
+.hud-corner::before,
+.hud-corner::after {
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-color: rgba(6, 182, 212, 0.6);
+  pointer-events: none;
+}
+
+.hud-corner::before {
+  top: -1px;
+  left: -1px;
+  border-top: 2px solid;
+  border-left: 2px solid;
+}
+
+.hud-corner::after {
+  bottom: -1px;
+  right: -1px;
+  border-bottom: 2px solid;
+  border-right: 2px solid;
+}
+
+/* Futuristic Laser Scan Animation */
 @keyframes ocrLaserScan {
   0% {
     top: 0%;
-    opacity: 0.8;
+    opacity: 0.9;
+    filter: drop-shadow(0 0 8px #00F0FF);
   }
   50% {
+    top: 50%;
     opacity: 1;
+    filter: drop-shadow(0 0 14px #10B981);
   }
   100% {
     top: 98%;
-    opacity: 0.8;
+    opacity: 0.9;
+    filter: drop-shadow(0 0 8px #00F0FF);
   }
 }
 
 .animate-laser-scan {
-  animation: ocrLaserScan 2.4s ease-in-out infinite alternate;
+  animation: ocrLaserScan 2.2s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate;
 }
 
-@keyframes gentlePulse {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 1;
+/* Radar Pulse Animation */
+@keyframes radarSweep {
+  from {
+    transform: rotate(0deg);
   }
-  50% {
-    transform: scale(1.05);
-    opacity: 0.85;
+  to {
+    transform: rotate(360deg);
   }
 }
 
-.animate-gentle-pulse {
-  animation: gentlePulse 3s ease-in-out infinite;
+.animate-radar-sweep {
+  animation: radarSweep 6s linear infinite;
 }
 
 @keyframes stampImpact {
@@ -119,58 +218,46 @@ body {
   animation: stampImpact 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 
-/* Modern subtle glow & interactive utilities */
-.modern-card-shadow {
-  box-shadow: 0 1px 3px 0 rgba(74, 55, 40, 0.05), 0 1px 2px -1px rgba(74, 55, 40, 0.05);
-}
-
-.modern-card-hover {
-  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.modern-card-hover:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 25px -5px rgba(74, 55, 40, 0.08), 0 8px 10px -6px rgba(74, 55, 40, 0.04);
-}
-
-/* Custom scrollbars matching Natural Tones */
+/* Futuristic Scrollbars */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #f5f5f0;
+  background: #070A12;
 }
 ::-webkit-scrollbar-thumb {
-  background: #DCD7CE;
-  border-radius: 4px;
+  background: #1E2E4E;
+  border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #C4BDAF;
+  background: #06B6D4;
+  box-shadow: 0 0 8px rgba(6, 182, 212, 0.6);
 }
 
-/* Custom Cadastral GIS Leaflet Map Overrides */
+/* Custom Cadastral GIS Leaflet Map Overrides (Futuristic Dark Satellite HUD) */
 .leaflet-container {
-  font-family: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
-  background-color: #1a1a12 !important;
+  font-family: "Space Grotesk", "Plus Jakarta Sans", system-ui, sans-serif !important;
+  background-color: #06090F !important;
 }
 
 .cadastral-custom-popup .leaflet-popup-content-wrapper {
-  background: #FAF8F5;
-  color: #33332A;
-  border-radius: 10px;
-  border: 1px solid #DCD7CE;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.35);
+  background: rgba(14, 21, 38, 0.95) !important;
+  color: #F1F5F9 !important;
+  border-radius: 12px;
+  border: 1px solid rgba(6, 182, 212, 0.4);
+  box-shadow: 0 12px 30px -5px rgba(0, 0, 0, 0.7), 0 0 20px rgba(6, 182, 212, 0.2);
   padding: 0;
+  backdrop-filter: blur(12px);
 }
 
 .cadastral-custom-popup .leaflet-popup-tip {
-  background: #FAF8F5;
-  border: 1px solid #DCD7CE;
+  background: #0E1526 !important;
+  border: 1px solid rgba(6, 182, 212, 0.4);
 }
 
 .cadastral-custom-popup .leaflet-popup-content {
-  margin: 10px 12px;
+  margin: 12px 14px;
 }
 
 .custom-cadastral-label {
@@ -185,7 +272,6 @@ body {
 
 /* Archival PDF Print Stylesheet */
 @media print {
-  /* Hide non-printable app UI elements */
   header,
   nav,
   footer,
@@ -199,7 +285,7 @@ body {
   body {
     background-color: #ffffff !important;
     color: #000000 !important;
-    font-family: Georgia, Cambria, "Times New Roman", Times, serif;
+    font-family: "Times New Roman", Times, serif;
     font-size: 10.5pt;
     line-height: 1.4;
     margin: 0 !important;
@@ -208,7 +294,6 @@ body {
     print-color-adjust: exact !important;
   }
 
-  /* Make print container take full viewport and reset modal overlays */
   .archival-print-wrapper {
     position: absolute !important;
     left: 0 !important;
@@ -249,7 +334,6 @@ body {
     page-break-before: always !important;
   }
 
-  /* Optimize table printing */
   table {
     border-collapse: collapse !important;
     width: 100% !important;

@@ -32,19 +32,19 @@ export const LandRecordLedgerTable: React.FC<LandRecordLedgerTableProps> = ({
 }) => {
   if (records.length === 0) {
     return (
-      <div className="text-center py-12 px-4 text-[#6B6B58] text-xs">
-        <Landmark className="w-8 h-8 mx-auto text-[#C4BDAF] mb-2" />
-        <p className="font-semibold text-[#33332A] text-sm">No land records found</p>
-        <p className="text-[#6B6B58] mt-1">Try adjusting your state filter, search keywords, or format criteria.</p>
+      <div className="text-center py-12 px-4 text-slate-400 text-xs bg-[#090E1A]/80 rounded-xl border border-slate-800">
+        <Landmark className="w-8 h-8 mx-auto text-slate-600 mb-2" />
+        <p className="font-semibold text-slate-200 text-sm">No land records found</p>
+        <p className="text-slate-400 mt-1">Try adjusting your state filter, search keywords, or format criteria.</p>
       </div>
     );
   }
 
   return (
-    <div className="w-full overflow-x-auto rounded-xl border border-[#DCD7CE] bg-[#FAF8F5]">
+    <div className="w-full overflow-x-auto rounded-xl border border-slate-800 bg-[#090E1A]/95 shadow-inner">
       <table className="w-full text-left border-collapse text-xs">
         <thead>
-          <tr className="border-b border-[#DCD7CE] bg-[#F5F3EE] text-[#5A5A40] font-semibold text-[11px] uppercase tracking-wider natural-serif">
+          <tr className="border-b border-slate-800 bg-[#0C1527] text-cyan-400 font-semibold text-[11px] uppercase tracking-wider font-mono">
             <th className="py-3 px-3 w-10 text-center">
               <span className="sr-only">Select</span>
             </th>
@@ -54,10 +54,10 @@ export const LandRecordLedgerTable: React.FC<LandRecordLedgerTableProps> = ({
                 <span>State &amp; Land Format</span>
                 <button
                   onClick={onOpenDirectoryModal}
-                  className="text-[#8B4513] hover:underline normal-case font-normal text-[10px]"
+                  className="text-cyan-400 hover:text-cyan-300 hover:underline normal-case font-mono text-[10px]"
                   title="View full National Directory of State Formats"
                 >
-                  (Guide)
+                  [Guide]
                 </button>
               </div>
             </th>
@@ -71,7 +71,7 @@ export const LandRecordLedgerTable: React.FC<LandRecordLedgerTableProps> = ({
             <th className="py-3 px-3 w-20 text-center">Action</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-[#DCD7CE]/70 text-[#33332A]">
+        <tbody className="divide-y divide-slate-800/80 text-slate-200">
           {records.map((record) => {
             const isSelected = selectedRecordIds.includes(record.id);
             const isVerified = record.status === 'VERIFIED_AND_SANCTIONED';
@@ -87,8 +87,8 @@ export const LandRecordLedgerTable: React.FC<LandRecordLedgerTableProps> = ({
                 onClick={() => onSelectRecord(record)}
                 className={`transition-colors cursor-pointer group ${
                   isSelected 
-                    ? 'bg-[#FFF9EA]' 
-                    : 'hover:bg-[#EBE7DF]/50'
+                    ? 'bg-cyan-950/40 border-l-2 border-cyan-400' 
+                    : 'hover:bg-cyan-950/20'
                 }`}
               >
                 {/* Checkbox */}
@@ -103,17 +103,17 @@ export const LandRecordLedgerTable: React.FC<LandRecordLedgerTableProps> = ({
                     type="checkbox"
                     checked={isSelected}
                     onChange={() => {}}
-                    className="w-4 h-4 rounded text-[#5A5A40] accent-[#5A5A40] cursor-pointer"
+                    className="w-4 h-4 rounded text-cyan-500 accent-cyan-500 cursor-pointer bg-slate-900 border-slate-700"
                     aria-label={`Select record ${record.documentNumber}`}
                   />
                 </td>
 
                 {/* Record Ref & Date */}
                 <td className="py-3 px-3">
-                  <div className="font-mono text-[11px] font-bold text-[#33332A] group-hover:text-[#8B4513] transition-colors">
+                  <div className="font-mono text-[11px] font-bold text-cyan-300 group-hover:text-cyan-200 transition-colors">
                     {record.documentNumber}
                   </div>
-                  <div className="text-[10px] text-[#6B6B58] mt-0.5">
+                  <div className="text-[10px] text-slate-400 mt-0.5 font-mono">
                     {uploadDate}
                   </div>
                 </td>
@@ -121,34 +121,34 @@ export const LandRecordLedgerTable: React.FC<LandRecordLedgerTableProps> = ({
                 {/* State & Official Statutory Land Format */}
                 <td className="py-3 px-3">
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="font-bold text-[#33332A] natural-serif text-xs">
+                    <span className="font-bold text-slate-100 natural-serif text-xs">
                       {record.state.value}
                     </span>
                   </div>
                   <div className="mt-1">
                     <span 
-                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold border ${format.badgeBg} ${format.badgeText} ${format.badgeBorder}`}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-cyan-950/80 text-cyan-300 border border-cyan-500/40 font-mono shadow-[0_0_8px_rgba(6,182,212,0.15)]"
                       title={`${format.statutoryAct} • ${format.portalUrl}`}
                     >
-                      <Landmark className="w-2.5 h-2.5 shrink-0" />
+                      <Landmark className="w-2.5 h-2.5 shrink-0 text-cyan-400" />
                       <span>{format.formatShort}</span>
                     </span>
                   </div>
-                  <div className="text-[10px] text-[#6B6B58] font-mono mt-0.5 truncate max-w-[190px]">
+                  <div className="text-[10px] text-slate-400 font-mono mt-0.5 truncate max-w-[190px]">
                     {format.formCode}
                   </div>
                 </td>
 
                 {/* Location (Village, Tehsil, District) */}
                 <td className="py-3 px-3">
-                  <div className="font-medium text-[#33332A] text-xs">
+                  <div className="font-medium text-slate-200 text-xs">
                     {record.village.value}
                   </div>
-                  <div className="text-[10px] text-[#6B6B58]">
+                  <div className="text-[10px] text-slate-400">
                     {record.tehsil.value}, {record.district.value}
                   </div>
                   {record.censusVillageCode?.value && (
-                    <div className="text-[9px] text-[#8B4513] font-mono">
+                    <div className="text-[9px] text-amber-400 font-mono mt-0.5">
                       LGD: {record.censusVillageCode.value}
                     </div>
                   )}
@@ -156,26 +156,26 @@ export const LandRecordLedgerTable: React.FC<LandRecordLedgerTableProps> = ({
 
                 {/* Parcel / Khasra / Survey Number */}
                 <td className="py-3 px-3">
-                  <div className="font-bold text-[#33332A] natural-serif text-xs">
+                  <div className="font-bold text-slate-100 natural-serif text-xs">
                     {record.khasraNumber.value}
                   </div>
-                  <div className="text-[10px] text-[#6B6B58]">
+                  <div className="text-[10px] text-slate-400 font-mono">
                     Khata: {record.khataNumber.value}
                   </div>
                 </td>
 
                 {/* Primary Landholder */}
                 <td className="py-3 px-3">
-                  <div className="font-semibold text-[#33332A] text-xs leading-tight">
+                  <div className="font-semibold text-slate-100 text-xs leading-tight">
                     {record.primaryOwnerName.value}
                   </div>
                   {record.coOwners && record.coOwners.length > 0 && (
-                    <div className="text-[10px] text-[#6B6B58] mt-0.5">
+                    <div className="text-[10px] text-cyan-400/80 mt-0.5">
                       +{record.coOwners.length} co-sharer{record.coOwners.length > 1 ? 's' : ''}
                     </div>
                   )}
                   {record.parentageOrSpouse?.value && (
-                    <div className="text-[9px] text-[#6B6B58] italic truncate max-w-[150px]">
+                    <div className="text-[9px] text-slate-400 italic truncate max-w-[150px]">
                       s/o {record.parentageOrSpouse.value}
                     </div>
                   )}
@@ -183,11 +183,11 @@ export const LandRecordLedgerTable: React.FC<LandRecordLedgerTableProps> = ({
 
                 {/* Total Declared Area */}
                 <td className="py-3 px-3">
-                  <div className="font-bold text-[#33332A] text-xs">
+                  <div className="font-bold text-slate-100 text-xs font-mono">
                     {record.totalAreaDeclared.value} {record.declaredUnit.value}
                   </div>
                   {record.normalizedAreaSqMeters && (
-                    <div className="text-[10px] text-[#6B6B58]">
+                    <div className="text-[10px] text-slate-400 font-mono">
                       {record.normalizedAreaSqMeters.toLocaleString()} m²
                     </div>
                   )}
@@ -197,15 +197,15 @@ export const LandRecordLedgerTable: React.FC<LandRecordLedgerTableProps> = ({
                 <td className="py-3 px-3">
                   {hasLien ? (
                     <span 
-                      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-[#FFF9EA] text-[#8B4513] border border-[#DCD7CE]"
+                      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-950/60 text-amber-300 border border-amber-500/40"
                       title={record.encumbranceRemarks?.value || 'Active encumbrance noted'}
                     >
-                      <AlertTriangle className="w-2.5 h-2.5 shrink-0 text-[#8B4513]" />
-                      <span className="truncate max-w-[110px]">{record.encumbranceStatus.value.replace(/_/g, ' ')}</span>
+                      <AlertTriangle className="w-2.5 h-2.5 shrink-0 text-amber-400" />
+                      <span className="truncate max-w-[110px] font-mono">{record.encumbranceStatus.value.replace(/_/g, ' ')}</span>
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[#3D5A40]">
-                      <CheckCircle2 className="w-3 h-3 text-[#3D5A40]" />
+                    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-400 font-mono">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-400" />
                       <span>Clear / Freehold</span>
                     </span>
                   )}
@@ -213,12 +213,12 @@ export const LandRecordLedgerTable: React.FC<LandRecordLedgerTableProps> = ({
 
                 {/* AI Confidence */}
                 <td className="py-3 px-3 text-center">
-                  <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                  <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold font-mono ${
                     record.overallConfidence >= 90
-                      ? 'bg-[#EAF2EB] text-[#3D5A40] border border-[#BCD4C0]'
+                      ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 shadow-[0_0_8px_rgba(16,185,129,0.2)]'
                       : record.overallConfidence >= 75
-                      ? 'bg-[#FFF9EA] text-[#8B4513] border border-[#DCD7CE]'
-                      : 'bg-[#FDF0ED] text-[#8B0000] border border-[#F2C2BA]'
+                      ? 'bg-amber-950/80 text-amber-300 border border-amber-500/40'
+                      : 'bg-rose-950/80 text-rose-300 border border-rose-500/40'
                   }`}>
                     {record.overallConfidence}%
                   </span>
@@ -226,19 +226,19 @@ export const LandRecordLedgerTable: React.FC<LandRecordLedgerTableProps> = ({
 
                 {/* Status */}
                 <td className="py-3 px-3">
-                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold font-mono ${
                     isVerified
-                      ? 'bg-[#EAF2EB] text-[#3D5A40] border border-[#BCD4C0]'
-                      : 'bg-[#FFF9EA] text-[#8B4513] border border-[#DCD7CE]'
+                      ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 shadow-[0_0_8px_rgba(16,185,129,0.25)]'
+                      : 'bg-amber-950/80 text-amber-300 border border-amber-500/40 shadow-[0_0_8px_rgba(245,158,11,0.2)]'
                   }`}>
                     {isVerified ? (
                       <>
-                        <ShieldCheck className="w-3 h-3 text-[#3D5A40]" />
+                        <ShieldCheck className="w-3 h-3 text-emerald-400" />
                         <span>Sanctioned</span>
                       </>
                     ) : (
                       <>
-                        <AlertTriangle className="w-3 h-3 text-[#8B4513]" />
+                        <AlertTriangle className="w-3 h-3 text-amber-400" />
                         <span>Review Needed</span>
                       </>
                     )}
@@ -252,7 +252,7 @@ export const LandRecordLedgerTable: React.FC<LandRecordLedgerTableProps> = ({
                       e.stopPropagation();
                       onSelectRecord(record);
                     }}
-                    className="p-1.5 rounded-lg border border-[#DCD7CE] bg-[#FAF8F5] hover:bg-[#EBE7DF] text-[#33332A] group-hover:text-[#8B4513] group-hover:border-[#C4BDAF] transition-all cursor-pointer"
+                    className="p-1.5 rounded-lg border border-slate-700 bg-slate-800/80 hover:bg-cyan-950 hover:border-cyan-400 text-slate-300 hover:text-cyan-300 transition-all cursor-pointer shadow-xs"
                     title="Inspect and verify this land record"
                   >
                     <Eye className="w-3.5 h-3.5" />

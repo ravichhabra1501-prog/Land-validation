@@ -148,72 +148,72 @@ export const VillageDigitizationBarChartWidget: React.FC<VillageDigitizationBarC
       v.totalDigitized30Days,
       v.sanctionedCount,
       v.needsReviewCount,
-      `${v.verificationRate}%`,
-      `${v.avgConfidence}%`,
+      v.verificationRate,
+      v.avgConfidence,
       v.totalAreaHectares,
       `"${v.primaryLocalUnit}"`,
       v.dailyVelocityAvg
     ]);
 
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `DILRMP_30Day_Village_Digitization_Summary_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute('download', `DILRMP_Village_Digitization_30Day_Summary_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  // Custom Tooltip component
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  // Custom Cyber Tooltip
+  const CustomTooltip = ({ active, payload }: any) => {
     if (!active || !payload || !payload.length) return null;
     const data = payload[0].payload;
 
     return (
-      <div className="bg-[#363625] text-[#FAF8F5] p-3.5 rounded-xl shadow-xl border border-[#5A5A40] text-xs max-w-xs space-y-2 z-50">
-        <div className="border-b border-[#5A5A40] pb-2">
+      <div className="bg-[#0B1224]/95 text-slate-100 p-3.5 rounded-xl shadow-[0_0_30px_rgba(0,0,0,0.8)] border border-cyan-500/40 text-xs max-w-xs space-y-2 z-50 backdrop-blur-xl">
+        <div className="border-b border-slate-800 pb-2">
           <div className="flex items-center justify-between gap-2">
-            <span className="font-bold text-sm text-[#FFF9EA] natural-serif">{data.name}</span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#5A5A40] text-[#EBE7DF]">
+            <span className="font-bold text-sm text-slate-100 natural-serif">{data.name}</span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-500/40 font-mono">
               {data.state}
             </span>
           </div>
-          <div className="flex items-center gap-1.5 text-[11px] text-[#D7D2C5] mt-0.5">
+          <div className="flex items-center gap-1.5 text-[11px] text-slate-400 mt-0.5">
             <span>{data.vernacular}</span>
             <span>•</span>
             <span>Dist: {data.district}</span>
             <span>•</span>
-            <span className="font-mono text-[10px]">LGD: {data.censusCode}</span>
+            <span className="font-mono text-[10px] text-amber-400">LGD: {data.censusCode}</span>
           </div>
         </div>
 
         <div className="space-y-1.5 py-1">
           <div className="flex justify-between items-center">
-            <span className="text-[#D7D2C5]">30-Day Digitized Total:</span>
-            <span className="font-bold text-sm text-[#FFF9EA]">{data.total} parcels</span>
+            <span className="text-slate-400">30-Day Digitized Total:</span>
+            <span className="font-bold text-sm text-cyan-300 font-mono">{data.total} parcels</span>
           </div>
-          <div className="flex justify-between items-center text-[#A6CCA0]">
+          <div className="flex justify-between items-center text-emerald-400">
             <span>✓ Sanctioned &amp; Verified:</span>
-            <span className="font-bold">{data.sanctioned} ({data.verificationRate}%)</span>
+            <span className="font-bold font-mono">{data.sanctioned} ({data.verificationRate}%)</span>
           </div>
-          <div className="flex justify-between items-center text-[#F2C2BA]">
+          <div className="flex justify-between items-center text-amber-400">
             <span>⚠ Pending Review:</span>
-            <span className="font-bold">{data.needsReview}</span>
+            <span className="font-bold font-mono">{data.needsReview}</span>
           </div>
-          <div className="flex justify-between items-center text-[#E5C37A]">
+          <div className="flex justify-between items-center text-cyan-300">
             <span>Indic OCR/HWR Accuracy:</span>
-            <span className="font-bold">{data.avgConfidence}%</span>
+            <span className="font-bold font-mono">{data.avgConfidence}%</span>
           </div>
-          <div className="flex justify-between items-center text-[#D7D2C5]">
+          <div className="flex justify-between items-center text-slate-300">
             <span>Area Digitized:</span>
-            <span className="font-medium text-[#FAF8F5]">{data.areaHa} Ha ({data.primaryUnit})</span>
+            <span className="font-medium text-slate-100 font-mono">{data.areaHa} Ha ({data.primaryUnit})</span>
           </div>
         </div>
 
-        <div className="pt-2 border-t border-[#5A5A40] text-[10px] text-[#A6CCA0] flex items-center justify-between">
-          <span>Daily Run-rate: ~{data.dailyAvg} parcels/day</span>
-          <span className="text-[#FFF9EA] underline cursor-pointer">Click to inspect</span>
+        <div className="pt-2 border-t border-slate-800 text-[10px] text-emerald-400 flex items-center justify-between font-mono">
+          <span>Run-rate: ~{data.dailyAvg} /day</span>
+          <span className="text-cyan-400 underline cursor-pointer">Click to inspect</span>
         </div>
       </div>
     );
@@ -222,26 +222,26 @@ export const VillageDigitizationBarChartWidget: React.FC<VillageDigitizationBarC
   return (
     <div 
       id="widget-village-30day-digitization"
-      className="bg-[#FAF8F5] rounded-2xl border border-[#DCD7CE] p-5 sm:p-6 shadow-2xs space-y-5"
+      className="bg-[#0E172A]/90 rounded-2xl border border-slate-800 p-5 sm:p-6 shadow-xl space-y-5 backdrop-blur-md"
     >
       {/* Widget Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-[#DCD7CE]">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-800">
         <div className="space-y-1.5">
           <div className="flex items-center gap-2 flex-wrap">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#EAF2EB] text-[#3D5A40] text-xs font-semibold border border-[#BCD4C0]">
-              <BarChart3 className="w-3.5 h-3.5" />
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-cyan-950/80 text-cyan-300 text-xs font-semibold border border-cyan-500/40 font-mono shadow-[0_0_10px_rgba(6,182,212,0.2)]">
+              <BarChart3 className="w-3.5 h-3.5 text-cyan-400" />
               <span>30-Day Village Digitization Velocity</span>
             </div>
-            <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#EBE7DF] text-[#5A5A40] text-xs font-medium border border-[#DCD7CE]">
-              <Calendar className="w-3 h-3" />
+            <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#0A0F1D] text-slate-300 text-xs font-mono border border-slate-700">
+              <Calendar className="w-3 h-3 text-cyan-400" />
               <span>{overallTotals.dateWindowLabel}</span>
             </div>
           </div>
-          <h3 className="text-lg sm:text-xl font-bold text-[#33332A] natural-serif tracking-tight">
+          <h3 className="text-lg sm:text-xl font-bold text-slate-100 natural-serif tracking-tight">
             Land Records Digitized per Revenue Village
           </h3>
-          <p className="text-xs text-[#6B6B58] max-w-2xl leading-relaxed">
-            Rolling 30-day throughput showing electronic mutation conversion, Saat-Baara / Jamabandi registers, and cadastral survey parcels sanctioned across active village jurisdictions.
+          <p className="text-xs text-slate-400 max-w-2xl leading-relaxed">
+            Rolling 30-day telemetry throughput showing electronic mutation conversion, Saat-Baara / Jamabandi registers, and cadastral survey parcels sanctioned across active village jurisdictions.
           </p>
         </div>
 
@@ -249,10 +249,10 @@ export const VillageDigitizationBarChartWidget: React.FC<VillageDigitizationBarC
         <div className="flex items-center gap-2 flex-wrap self-start lg:self-center">
           <button
             onClick={handleExportCSV}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#DCD7CE] bg-[#FAF8F5] hover:bg-[#F5F3EE] text-[#4A3728] text-xs font-medium transition-colors cursor-pointer shadow-2xs"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-cyan-500/30 bg-[#0B1327] hover:bg-[#111D3B] text-cyan-300 text-xs font-mono font-medium transition-colors cursor-pointer shadow-[0_0_10px_rgba(6,182,212,0.15)]"
             title="Download CSV summary for these revenue villages"
           >
-            <Download className="w-3.5 h-3.5 text-[#5A5A40]" />
+            <Download className="w-3.5 h-3.5 text-cyan-400" />
             <span>Export CSV</span>
           </button>
         </div>
@@ -260,77 +260,77 @@ export const VillageDigitizationBarChartWidget: React.FC<VillageDigitizationBarC
 
       {/* KPI Highlight Strip */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        <div className="bg-[#F5F3EE] p-3 rounded-xl border border-[#DCD7CE]">
-          <span className="text-[11px] font-semibold text-[#6B6B58] block uppercase tracking-wider natural-serif">
+        <div className="bg-[#090E1A] p-3 rounded-xl border border-slate-800">
+          <span className="text-[11px] font-semibold text-slate-400 block uppercase tracking-wider font-mono">
             30-Day Total
           </span>
           <div className="mt-1 flex items-baseline gap-1">
-            <span className="text-xl font-bold text-[#33332A] natural-serif">
+            <span className="text-xl font-bold text-slate-100 font-mono">
               {overallTotals.totalParcelsDigitized.toLocaleString()}
             </span>
-            <span className="text-[10px] text-[#6B6B58]">parcels</span>
+            <span className="text-[10px] text-slate-400">parcels</span>
           </div>
         </div>
 
-        <div className="bg-[#F5F3EE] p-3 rounded-xl border border-[#DCD7CE]">
-          <span className="text-[11px] font-semibold text-[#6B6B58] block uppercase tracking-wider natural-serif">
+        <div className="bg-[#090E1A] p-3 rounded-xl border border-slate-800">
+          <span className="text-[11px] font-semibold text-slate-400 block uppercase tracking-wider font-mono">
             Active Villages
           </span>
           <div className="mt-1 flex items-baseline gap-1">
-            <span className="text-xl font-bold text-[#33332A] natural-serif">
+            <span className="text-xl font-bold text-slate-100 font-mono">
               {overallTotals.activeVillagesCount}
             </span>
-            <span className="text-[10px] text-[#3D5A40] font-semibold">Jurisdictions</span>
+            <span className="text-[10px] text-cyan-400 font-semibold font-mono">Hubs</span>
           </div>
         </div>
 
-        <div className="bg-[#EAF2EB] p-3 rounded-xl border border-[#BCD4C0]">
-          <span className="text-[11px] font-semibold text-[#3D5A40] block uppercase tracking-wider natural-serif">
+        <div className="bg-emerald-950/40 p-3 rounded-xl border border-emerald-500/40 shadow-[0_0_15px_rgba(16,185,129,0.15)]">
+          <span className="text-[11px] font-semibold text-emerald-400 block uppercase tracking-wider font-mono">
             Sanctioned
           </span>
           <div className="mt-1 flex items-baseline gap-1">
-            <span className="text-xl font-bold text-[#2D4530] natural-serif">
+            <span className="text-xl font-bold text-emerald-300 font-mono">
               {overallTotals.totalSanctioned.toLocaleString()}
             </span>
-            <span className="text-[10px] text-[#3D5A40] font-bold">
+            <span className="text-[10px] text-emerald-400 font-bold font-mono">
               ({overallTotals.overallPassRate}%)
             </span>
           </div>
         </div>
 
-        <div className="bg-[#FDF0ED] p-3 rounded-xl border border-[#F2C2BA]">
-          <span className="text-[11px] font-semibold text-[#8B0000] block uppercase tracking-wider natural-serif">
+        <div className="bg-amber-950/40 p-3 rounded-xl border border-amber-500/40 shadow-[0_0_15px_rgba(245,158,11,0.15)]">
+          <span className="text-[11px] font-semibold text-amber-400 block uppercase tracking-wider font-mono">
             Pending Review
           </span>
           <div className="mt-1 flex items-baseline gap-1">
-            <span className="text-xl font-bold text-[#8B0000] natural-serif">
+            <span className="text-xl font-bold text-amber-300 font-mono">
               {overallTotals.totalNeedsReview.toLocaleString()}
             </span>
-            <span className="text-[10px] text-[#8B0000] font-semibold">Parcels</span>
+            <span className="text-[10px] text-amber-400 font-semibold font-mono">Parcels</span>
           </div>
         </div>
 
-        <div className="bg-[#F5F3EE] p-3 rounded-xl border border-[#DCD7CE]">
-          <span className="text-[11px] font-semibold text-[#6B6B58] block uppercase tracking-wider natural-serif">
+        <div className="bg-[#090E1A] p-3 rounded-xl border border-slate-800">
+          <span className="text-[11px] font-semibold text-slate-400 block uppercase tracking-wider font-mono">
             Daily Velocity
           </span>
           <div className="mt-1 flex items-baseline gap-1">
-            <span className="text-xl font-bold text-[#33332A] natural-serif">
+            <span className="text-xl font-bold text-slate-100 font-mono">
               ~{overallTotals.dailyVelocityAverage}
             </span>
-            <span className="text-[10px] text-[#6B6B58]">parcels/day</span>
+            <span className="text-[10px] text-slate-400 font-mono">/day</span>
           </div>
         </div>
 
-        <div className="bg-[#FFF9EA] p-3 rounded-xl border border-[#DCD7CE]">
-          <span className="text-[11px] font-semibold text-[#8B4513] block uppercase tracking-wider natural-serif truncate" title={overallTotals.topVillageName}>
+        <div className="bg-cyan-950/40 p-3 rounded-xl border border-cyan-500/40 shadow-[0_0_15px_rgba(6,182,212,0.15)]">
+          <span className="text-[11px] font-semibold text-cyan-400 block uppercase tracking-wider font-mono truncate" title={overallTotals.topVillageName}>
             Leading Hub
           </span>
           <div className="mt-1 flex items-baseline gap-1">
-            <span className="text-sm font-bold text-[#4A3728] truncate natural-serif" title={overallTotals.topVillageName}>
+            <span className="text-sm font-bold text-slate-100 truncate natural-serif" title={overallTotals.topVillageName}>
               {overallTotals.topVillageName.split(' ')[0]}
             </span>
-            <span className="text-[10px] font-bold text-[#8B4513]">
+            <span className="text-[10px] font-bold text-cyan-300 font-mono">
               ({overallTotals.topVillageCount})
             </span>
           </div>
@@ -338,37 +338,37 @@ export const VillageDigitizationBarChartWidget: React.FC<VillageDigitizationBarC
       </div>
 
       {/* Toolbar Controls: Metric Mode, Orientation, State Filter, Sorting, Limit */}
-      <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl bg-[#F5F3EE] border border-[#DCD7CE]">
+      <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl bg-[#090E1A] border border-slate-800">
         {/* Metric Mode Pill Switcher */}
         <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-xs font-semibold text-[#6B6B58] natural-serif mr-1">Display:</span>
-          <div className="inline-flex rounded-lg border border-[#DCD7CE] bg-[#FAF8F5] p-0.5">
+          <span className="text-xs font-semibold text-slate-400 font-mono mr-1">Display:</span>
+          <div className="inline-flex rounded-lg border border-slate-800 bg-[#0C1527] p-0.5">
             <button
               onClick={() => setMetricMode('STACKED_STATUS')}
-              className={`px-2.5 py-1 text-xs rounded-md transition-all cursor-pointer font-medium ${
+              className={`px-2.5 py-1 text-xs rounded-md transition-all cursor-pointer font-mono font-medium ${
                 metricMode === 'STACKED_STATUS'
-                  ? 'bg-[#3D5A40] text-[#FFF9EA] font-bold shadow-2xs'
-                  : 'text-[#5A5A40] hover:text-[#33332A]'
+                  ? 'bg-emerald-500/25 text-emerald-300 border border-emerald-500/50 shadow-[0_0_10px_rgba(16,185,129,0.3)]'
+                  : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               Sanctioned vs Review
             </button>
             <button
               onClick={() => setMetricMode('TOTAL')}
-              className={`px-2.5 py-1 text-xs rounded-md transition-all cursor-pointer font-medium ${
+              className={`px-2.5 py-1 text-xs rounded-md transition-all cursor-pointer font-mono font-medium ${
                 metricMode === 'TOTAL'
-                  ? 'bg-[#5A5A40] text-[#FFF9EA] font-bold shadow-2xs'
-                  : 'text-[#5A5A40] hover:text-[#33332A]'
+                  ? 'bg-cyan-500/25 text-cyan-300 border border-cyan-500/50 shadow-[0_0_10px_rgba(6,182,212,0.3)]'
+                  : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               Total Volume
             </button>
             <button
               onClick={() => setMetricMode('AREA_HA')}
-              className={`px-2.5 py-1 text-xs rounded-md transition-all cursor-pointer font-medium ${
+              className={`px-2.5 py-1 text-xs rounded-md transition-all cursor-pointer font-mono font-medium ${
                 metricMode === 'AREA_HA'
-                  ? 'bg-[#8B4513] text-[#FFF9EA] font-bold shadow-2xs'
-                  : 'text-[#5A5A40] hover:text-[#33332A]'
+                  ? 'bg-sky-500/25 text-sky-300 border border-sky-500/50 shadow-[0_0_10px_rgba(56,189,248,0.3)]'
+                  : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               Area (Hectares)
@@ -379,13 +379,13 @@ export const VillageDigitizationBarChartWidget: React.FC<VillageDigitizationBarC
         {/* Filters and View Controls */}
         <div className="flex items-center gap-2.5 flex-wrap">
           {/* Orientation Toggle */}
-          <div className="inline-flex rounded-lg border border-[#DCD7CE] bg-[#FAF8F5] p-0.5 text-xs">
+          <div className="inline-flex rounded-lg border border-slate-800 bg-[#0C1527] p-0.5 text-xs font-mono">
             <button
               onClick={() => setOrientation('HORIZONTAL')}
               className={`px-2 py-1 rounded-md transition-all cursor-pointer ${
                 orientation === 'HORIZONTAL'
-                  ? 'bg-[#EBE7DF] text-[#33332A] font-bold'
-                  : 'text-[#6B6B58] hover:text-[#33332A]'
+                  ? 'bg-slate-800 text-cyan-300 font-bold'
+                  : 'text-slate-400 hover:text-slate-200'
               }`}
               title="Horizontal Bar Chart (Best for readability)"
             >
@@ -395,8 +395,8 @@ export const VillageDigitizationBarChartWidget: React.FC<VillageDigitizationBarC
               onClick={() => setOrientation('VERTICAL')}
               className={`px-2 py-1 rounded-md transition-all cursor-pointer ${
                 orientation === 'VERTICAL'
-                  ? 'bg-[#EBE7DF] text-[#33332A] font-bold'
-                  : 'text-[#6B6B58] hover:text-[#33332A]'
+                  ? 'bg-slate-800 text-cyan-300 font-bold'
+                  : 'text-slate-400 hover:text-slate-200'
               }`}
               title="Vertical Column Chart"
             >
@@ -406,14 +406,14 @@ export const VillageDigitizationBarChartWidget: React.FC<VillageDigitizationBarC
 
           {/* State Filter */}
           <div className="flex items-center gap-1 text-xs">
-            <Filter className="w-3.5 h-3.5 text-[#6B6B58]" />
+            <Filter className="w-3.5 h-3.5 text-cyan-400" />
             <select
               value={selectedState}
               onChange={(e) => setSelectedState(e.target.value)}
-              className="bg-[#FAF8F5] border border-[#DCD7CE] text-[#33332A] rounded-lg px-2 py-1 text-xs font-medium focus:outline-hidden focus:ring-1 focus:ring-[#5A5A40] cursor-pointer"
+              className="bg-[#0C1527] border border-slate-800 text-slate-200 rounded-lg px-2 py-1 text-xs font-medium focus:outline-hidden focus:border-cyan-400 cursor-pointer font-mono"
             >
               {availableStates.map((st) => (
-                <option key={st} value={st}>
+                <option key={st} value={st} className="bg-[#0C1527]">
                   {st === 'ALL' ? 'All States' : st}
                 </option>
               ))}
@@ -421,12 +421,12 @@ export const VillageDigitizationBarChartWidget: React.FC<VillageDigitizationBarC
           </div>
 
           {/* Limit / Scope */}
-          <div className="flex items-center gap-1 text-xs">
-            <span className="text-[#6B6B58]">Show:</span>
+          <div className="flex items-center gap-1 text-xs font-mono">
+            <span className="text-slate-400">Show:</span>
             <select
               value={villageDisplayLimit}
               onChange={(e) => setVillageDisplayLimit(Number(e.target.value))}
-              className="bg-[#FAF8F5] border border-[#DCD7CE] text-[#33332A] rounded-lg px-2 py-1 text-xs font-medium focus:outline-hidden focus:ring-1 focus:ring-[#5A5A40] cursor-pointer"
+              className="bg-[#0C1527] border border-slate-800 text-slate-200 rounded-lg px-2 py-1 text-xs font-medium focus:outline-hidden focus:border-cyan-400 cursor-pointer font-mono"
             >
               <option value={8}>Top 8</option>
               <option value={10}>Top 10</option>
@@ -436,12 +436,12 @@ export const VillageDigitizationBarChartWidget: React.FC<VillageDigitizationBarC
           </div>
 
           {/* Sort By */}
-          <div className="flex items-center gap-1 text-xs">
-            <ArrowUpDown className="w-3.5 h-3.5 text-[#6B6B58]" />
+          <div className="flex items-center gap-1 text-xs font-mono">
+            <ArrowUpDown className="w-3.5 h-3.5 text-cyan-400" />
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as SortOption)}
-              className="bg-[#FAF8F5] border border-[#DCD7CE] text-[#33332A] rounded-lg px-2 py-1 text-xs font-medium focus:outline-hidden focus:ring-1 focus:ring-[#5A5A40] cursor-pointer"
+              className="bg-[#0C1527] border border-slate-800 text-slate-200 rounded-lg px-2 py-1 text-xs font-medium focus:outline-hidden focus:border-cyan-400 cursor-pointer font-mono"
             >
               <option value="VOLUME_DESC">Highest Volume</option>
               <option value="VOLUME_ASC">Lowest Volume</option>
@@ -476,31 +476,31 @@ export const VillageDigitizationBarChartWidget: React.FC<VillageDigitizationBarC
                   }
                 }}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke="#EBE7DF" horizontal={true} vertical={true} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" horizontal={true} vertical={true} />
                 <XAxis 
                   type="number" 
-                  stroke="#8C887B" 
-                  fontSize={11}
-                  tickLine={false}
-                  axisLine={{ stroke: '#DCD7CE' }}
+                  stroke="#64748B" 
+                  fontSize={11} 
+                  tickLine={false} 
+                  axisLine={{ stroke: '#334155' }} 
                 />
                 <YAxis 
-                  type="category" 
                   dataKey="name" 
-                  stroke="#4A3728" 
-                  fontSize={11}
+                  type="category" 
+                  stroke="#94A3B8" 
+                  fontSize={11} 
+                  width={110}
                   tickLine={false}
-                  axisLine={{ stroke: '#DCD7CE' }}
-                  width={90}
+                  axisLine={{ stroke: '#334155' }}
                 />
-                <Tooltip content={<CustomTooltip />} cursor={{ fill: '#EBE7DF', opacity: 0.4 }} />
+                <Tooltip content={<CustomTooltip />} cursor={{ fill: '#1E293B', opacity: 0.3 }} />
                 <Legend 
                   verticalAlign="top" 
                   height={32}
                   iconType="circle"
                   iconSize={8}
                   formatter={(val: string) => (
-                    <span className="text-xs font-medium text-[#4A3728] natural-serif">{val}</span>
+                    <span className="text-xs font-mono text-slate-300">{val}</span>
                   )}
                 />
 
@@ -510,13 +510,13 @@ export const VillageDigitizationBarChartWidget: React.FC<VillageDigitizationBarC
                       dataKey="sanctioned" 
                       name="Sanctioned & Verified" 
                       stackId="status" 
-                      fill="#3D5A40" 
+                      fill="#10B981" 
                       radius={[0, 0, 0, 0]}
                     >
                       {chartData.map((entry, index) => (
                         <Cell 
                           key={`cell-sanctioned-${index}`}
-                          fill={selectedVillageName === entry.name ? '#253828' : '#3D5A40'}
+                          fill={selectedVillageName === entry.name ? '#34D399' : '#10B981'}
                           className="cursor-pointer transition-opacity hover:opacity-90"
                         />
                       ))}
@@ -525,13 +525,13 @@ export const VillageDigitizationBarChartWidget: React.FC<VillageDigitizationBarC
                       dataKey="needsReview" 
                       name="Pending Review (HITL)" 
                       stackId="status" 
-                      fill="#C89D54" 
+                      fill="#F59E0B" 
                       radius={[0, 6, 6, 0]}
                     >
                       {chartData.map((entry, index) => (
                         <Cell 
                           key={`cell-review-${index}`}
-                          fill={selectedVillageName === entry.name ? '#A67C33' : '#C89D54'}
+                          fill={selectedVillageName === entry.name ? '#FBBF24' : '#F59E0B'}
                           className="cursor-pointer transition-opacity hover:opacity-90"
                         />
                       ))}
@@ -541,13 +541,13 @@ export const VillageDigitizationBarChartWidget: React.FC<VillageDigitizationBarC
                   <Bar 
                     dataKey="total" 
                     name="30-Day Digitized Parcels" 
-                    fill="#5A5A40" 
+                    fill="#06B6D4" 
                     radius={[0, 6, 6, 0]}
                   >
                     {chartData.map((entry, index) => (
                       <Cell 
                         key={`cell-total-${index}`}
-                        fill={selectedVillageName === entry.name ? '#3D5A40' : index === 0 ? '#43432F' : '#5A5A40'}
+                        fill={selectedVillageName === entry.name ? '#22D3EE' : index === 0 ? '#38BDF8' : '#06B6D4'}
                         className="cursor-pointer transition-opacity hover:opacity-90"
                       />
                     ))}
@@ -556,13 +556,13 @@ export const VillageDigitizationBarChartWidget: React.FC<VillageDigitizationBarC
                   <Bar 
                     dataKey="areaHa" 
                     name="Total Area (Hectares)" 
-                    fill="#8B4513" 
+                    fill="#38BDF8" 
                     radius={[0, 6, 6, 0]}
                   >
                     {chartData.map((entry, index) => (
                       <Cell 
                         key={`cell-area-${index}`}
-                        fill={selectedVillageName === entry.name ? '#5E2E0D' : '#8B4513'}
+                        fill={selectedVillageName === entry.name ? '#7DD3FC' : '#38BDF8'}
                         className="cursor-pointer transition-opacity hover:opacity-90"
                       />
                     ))}
@@ -581,32 +581,32 @@ export const VillageDigitizationBarChartWidget: React.FC<VillageDigitizationBarC
                   }
                 }}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke="#EBE7DF" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" />
                 <XAxis 
                   dataKey="name" 
-                  stroke="#4A3728" 
+                  stroke="#94A3B8" 
                   fontSize={11}
                   interval={0}
                   angle={-35}
                   textAnchor="end"
                   height={50}
                   tickLine={false}
-                  axisLine={{ stroke: '#DCD7CE' }}
+                  axisLine={{ stroke: '#334155' }}
                 />
                 <YAxis 
-                  stroke="#8C887B" 
+                  stroke="#64748B" 
                   fontSize={11}
                   tickLine={false}
-                  axisLine={{ stroke: '#DCD7CE' }}
+                  axisLine={{ stroke: '#334155' }}
                 />
-                <Tooltip content={<CustomTooltip />} cursor={{ fill: '#EBE7DF', opacity: 0.4 }} />
+                <Tooltip content={<CustomTooltip />} cursor={{ fill: '#1E293B', opacity: 0.3 }} />
                 <Legend 
                   verticalAlign="top" 
                   height={32}
                   iconType="circle"
                   iconSize={8}
                   formatter={(val: string) => (
-                    <span className="text-xs font-medium text-[#4A3728] natural-serif">{val}</span>
+                    <span className="text-xs font-mono text-slate-300">{val}</span>
                   )}
                 />
 
@@ -616,12 +616,12 @@ export const VillageDigitizationBarChartWidget: React.FC<VillageDigitizationBarC
                       dataKey="sanctioned" 
                       name="Sanctioned & Verified" 
                       stackId="status" 
-                      fill="#3D5A40"
+                      fill="#10B981"
                     >
                       {chartData.map((entry, index) => (
                         <Cell 
                           key={`cell-v-sanctioned-${index}`}
-                          fill={selectedVillageName === entry.name ? '#253828' : '#3D5A40'}
+                          fill={selectedVillageName === entry.name ? '#34D399' : '#10B981'}
                           className="cursor-pointer"
                         />
                       ))}
@@ -630,13 +630,13 @@ export const VillageDigitizationBarChartWidget: React.FC<VillageDigitizationBarC
                       dataKey="needsReview" 
                       name="Pending Review" 
                       stackId="status" 
-                      fill="#C89D54" 
+                      fill="#F59E0B" 
                       radius={[6, 6, 0, 0]}
                     >
                       {chartData.map((entry, index) => (
                         <Cell 
                           key={`cell-v-review-${index}`}
-                          fill={selectedVillageName === entry.name ? '#A67C33' : '#C89D54'}
+                          fill={selectedVillageName === entry.name ? '#FBBF24' : '#F59E0B'}
                           className="cursor-pointer"
                         />
                       ))}
@@ -646,13 +646,13 @@ export const VillageDigitizationBarChartWidget: React.FC<VillageDigitizationBarC
                   <Bar 
                     dataKey="total" 
                     name="30-Day Digitized Parcels" 
-                    fill="#5A5A40" 
+                    fill="#06B6D4" 
                     radius={[6, 6, 0, 0]}
                   >
                     {chartData.map((entry, index) => (
                       <Cell 
                         key={`cell-v-total-${index}`}
-                        fill={selectedVillageName === entry.name ? '#3D5A40' : '#5A5A40'}
+                        fill={selectedVillageName === entry.name ? '#22D3EE' : '#06B6D4'}
                         className="cursor-pointer"
                       />
                     ))}
@@ -661,13 +661,13 @@ export const VillageDigitizationBarChartWidget: React.FC<VillageDigitizationBarC
                   <Bar 
                     dataKey="areaHa" 
                     name="Area (Hectares)" 
-                    fill="#8B4513" 
+                    fill="#38BDF8" 
                     radius={[6, 6, 0, 0]}
                   >
                     {chartData.map((entry, index) => (
                       <Cell 
                         key={`cell-v-area-${index}`}
-                        fill={selectedVillageName === entry.name ? '#5E2E0D' : '#8B4513'}
+                        fill={selectedVillageName === entry.name ? '#7DD3FC' : '#38BDF8'}
                         className="cursor-pointer"
                       />
                     ))}
@@ -686,26 +686,26 @@ export const VillageDigitizationBarChartWidget: React.FC<VillageDigitizationBarC
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 8 }}
-            className="p-4 rounded-xl bg-[#FAF8F5] border-2 border-[#5A5A40] shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4"
+            className="p-4 rounded-xl bg-[#091024] border-2 border-cyan-500/50 shadow-[0_0_25px_rgba(6,182,212,0.25)] flex flex-col md:flex-row md:items-center justify-between gap-4"
           >
             <div className="flex items-start gap-3">
-              <div className="p-2.5 rounded-xl bg-[#363625] text-[#FFF9EA]">
-                <MapPin className="w-5 h-5 text-[#E5C37A]" />
+              <div className="p-2.5 rounded-xl bg-cyan-950 text-cyan-300 border border-cyan-500/40 shadow-[0_0_10px_rgba(6,182,212,0.3)]">
+                <MapPin className="w-5 h-5 text-cyan-400" />
               </div>
               <div className="space-y-0.5">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-bold text-[#33332A] text-sm sm:text-base natural-serif">
+                  <span className="font-bold text-slate-100 text-sm sm:text-base natural-serif">
                     {selectedVillageData.villageName} ({selectedVillageData.vernacularName})
                   </span>
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-[#EBE7DF] text-[#5A5A40] font-medium">
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-medium">
                     {selectedVillageData.district}, {selectedVillageData.state}
                   </span>
-                  <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-[#F5F3EE] text-[#6B6B58] border border-[#DCD7CE]">
+                  <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-amber-950/60 text-amber-300 border border-amber-500/40">
                     LGD: {selectedVillageData.censusCode}
                   </span>
                 </div>
-                <p className="text-xs text-[#6B6B58]">
-                  Digitized in last 30 days: <strong className="text-[#33332A]">{selectedVillageData.totalDigitized30Days} parcels</strong> ({selectedVillageData.totalAreaHectares} Ha) • Verification Rate: <strong className="text-[#3D5A40]">{selectedVillageData.verificationRate}%</strong> • Avg OCR: <strong>{selectedVillageData.avgConfidence}%</strong>
+                <p className="text-xs text-slate-400 font-mono">
+                  Digitized in last 30 days: <strong className="text-cyan-300">{selectedVillageData.totalDigitized30Days} parcels</strong> ({selectedVillageData.totalAreaHectares} Ha) • Verification Rate: <strong className="text-emerald-400">{selectedVillageData.verificationRate}%</strong> • Avg OCR: <strong className="text-slate-200">{selectedVillageData.avgConfidence}%</strong>
                 </p>
               </div>
             </div>
@@ -714,7 +714,7 @@ export const VillageDigitizationBarChartWidget: React.FC<VillageDigitizationBarC
               {onFilterVillage && (
                 <button
                   onClick={() => onFilterVillage(selectedVillageData.villageName)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#3D5A40] hover:bg-[#2F4632] text-[#FFF9EA] text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/50 text-xs font-mono font-semibold shadow-[0_0_10px_rgba(6,182,212,0.2)] transition-colors cursor-pointer"
                   title="Filter Ingestion Queue table to this village"
                 >
                   <Filter className="w-3.5 h-3.5" />
@@ -725,17 +725,17 @@ export const VillageDigitizationBarChartWidget: React.FC<VillageDigitizationBarC
               {onOpenVillageModal && (
                 <button
                   onClick={() => onOpenVillageModal(selectedVillageData.villageName)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#FAF8F5] hover:bg-[#EBE7DF] text-[#4A3728] border border-[#DCD7CE] text-xs font-semibold transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-medium transition-colors cursor-pointer"
                   title="View full agro-climatic and tenurial specifications"
                 >
-                  <Info className="w-3.5 h-3.5 text-[#5A5A40]" />
+                  <Info className="w-3.5 h-3.5 text-cyan-400" />
                   <span>Village Specifications</span>
                 </button>
               )}
 
               <button
                 onClick={() => setSelectedVillageName(null)}
-                className="px-2.5 py-1.5 rounded-lg hover:bg-[#EBE7DF] text-[#6B6B58] text-xs transition-colors cursor-pointer"
+                className="px-2.5 py-1.5 rounded-lg hover:bg-slate-800 text-slate-400 text-xs transition-colors cursor-pointer"
               >
                 Close
               </button>
@@ -745,14 +745,14 @@ export const VillageDigitizationBarChartWidget: React.FC<VillageDigitizationBarC
       </AnimatePresence>
 
       {/* Village Summary Footnote */}
-      <div className="pt-3 border-t border-[#DCD7CE] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px] text-[#6B6B58]">
+      <div className="pt-3 border-t border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px] text-slate-400">
         <div className="flex items-center gap-1.5">
-          <Sparkles className="w-3.5 h-3.5 text-[#8B4513]" />
+          <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
           <span>
             Aggregates live scanned ingestions with Aks Shajra survey sprint records under DILRMP Phase-4.
           </span>
         </div>
-        <div className="flex items-center gap-2 text-[#5A5A40]">
+        <div className="flex items-center gap-2 text-cyan-400 font-mono text-[10px]">
           <span>Tip: Click on any village bar to filter the ledger or inspect village specifications.</span>
         </div>
       </div>

@@ -403,34 +403,36 @@ export default function App() {
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
-            className="bg-[#3D5A40] text-[#FFF9EA] px-4 py-2 text-xs text-center font-medium shadow-md flex items-center justify-center gap-2"
+            className="bg-emerald-950/90 text-emerald-300 border-b border-emerald-500/40 px-4 py-2 text-xs text-center font-mono shadow-[0_0_20px_rgba(16,185,129,0.3)] flex items-center justify-center gap-2"
           >
-            <CheckCircle2 className="w-3.5 h-3.5 text-[#82B37A]" />
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
             <span>{syncNotice}</span>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Sub-header Operational Context Ribbon */}
-      <div className="bg-[#FAF8F5]/60 border-b border-[#DCD7CE]/60 py-1.5 text-xs">
+      {/* Sub-header Operational Context Ribbon - Cyber HUD Telemetry */}
+      <div className="bg-[#0A0F1D]/80 backdrop-blur-md border-b border-cyan-500/20 py-2 text-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2 text-[#5A5A40]">
+          <div className="flex items-center gap-2 text-slate-300">
             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#82B37A] opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#3D5A40]"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400 shadow-[0_0_6px_#10B981]"></span>
             </span>
-            <span className="font-semibold text-[#33332A]">{t.sessionActive}</span>
-            <span className="text-[#6B6B58] hidden sm:inline">•</span>
-            <span className="text-[#6B6B58] hidden sm:inline font-mono">DILRMP-CADASTRE-OFFLINE-ENGINE</span>
+            <span className="font-semibold text-slate-100 font-mono tracking-wide">{t.sessionActive}</span>
+            <span className="text-slate-600 hidden sm:inline">•</span>
+            <span className="text-cyan-400/90 hidden sm:inline font-mono text-[11px] tracking-wider bg-cyan-950/50 px-2 py-0.5 rounded border border-cyan-500/30">
+              ORBITAL-CADASTRE-OFFLINE-ENGINE // V4.2
+            </span>
           </div>
 
-          <div className="flex items-center gap-3 text-[11px] text-[#5A5A40]">
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[#EBE7DF]/70 border border-[#DCD7CE]">
-              <span className="font-medium">{t.totalRecords}:</span>
-              <span className="font-bold text-[#33332A]">{records.length}</span>
+          <div className="flex items-center gap-3 text-[11px]">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#0F172A] border border-cyan-500/30 text-slate-300 font-mono shadow-sm">
+              <span className="text-slate-400">{t.totalRecords}:</span>
+              <span className="font-bold text-cyan-300">{records.length}</span>
             </span>
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[#FFF9EA] border border-[#DCD7CE] text-[#8B4513]">
-              <span className="font-medium">{t.pendingReview}:</span>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-950/40 border border-amber-500/40 text-amber-300 font-mono shadow-[0_0_10px_rgba(245,158,11,0.2)]">
+              <span className="text-amber-400">{t.pendingReview}:</span>
               <span className="font-bold">{pendingReviewCount}</span>
             </span>
           </div>
@@ -517,19 +519,19 @@ export default function App() {
         </AnimatePresence>
       </main>
 
-      {/* Footer Branding and Statutory Assurance */}
-      <footer className="bg-[#FAF8F5] border-t border-[#DCD7CE] py-4 text-xs text-[#6B6B58] text-center">
+      {/* Footer Branding and Statutory Assurance - Cyber HUD style */}
+      <footer className="bg-[#070A12]/90 border-t border-slate-800/80 py-4 text-xs text-slate-400 text-center">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-[#5A5A40]" />
-            <span>DILRMP Certified Cadastral Verification & Offline Storage Engine • Government of India</span>
+            <ShieldCheck className="w-4 h-4 text-cyan-400" />
+            <span className="text-slate-300">DILRMP Certified Cadastral Verification &amp; Quantum Offline Storage Engine • Government of India</span>
           </div>
-          <div className="flex items-center gap-3 text-[11px]">
-            <span>Local Storage Fallback Active</span>
+          <div className="flex items-center gap-3 text-[11px] font-mono text-slate-500">
+            <span className="text-emerald-400/80">Local Storage Active</span>
             <span>•</span>
-            <span>Service Worker PWA Cached</span>
+            <span className="text-cyan-400/80">Service Worker PWA Cached</span>
             <span>•</span>
-            <span>ISO 19152 LADM Aligned</span>
+            <span className="text-slate-400">ISO 19152 LADM Aligned</span>
           </div>
         </div>
       </footer>

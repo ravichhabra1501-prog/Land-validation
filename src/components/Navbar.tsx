@@ -13,7 +13,10 @@ import {
   AlertTriangle, 
   X, 
   Terminal, 
-  Calendar 
+  Calendar,
+  Activity,
+  Radio,
+  Cpu
 } from 'lucide-react';
 import { UserRole, IndicLanguage, AuthUser } from '../types';
 import { getTranslations, setStoredLanguage } from '../utils/translations';
@@ -97,7 +100,10 @@ export const Navbar: React.FC<NavbarProps> = ({
     t.roleCitizenViewer;
 
   return (
-    <header className="sticky top-0 z-50 bg-[#FAF8F5]/90 backdrop-blur-xl border-b border-[#DCD7CE]/80 shadow-xs transition-all">
+    <header className="sticky top-0 z-50 bg-[#070A12]/85 backdrop-blur-2xl border-b border-cyan-500/20 shadow-[0_4px_30px_rgba(0,0,0,0.8)] transition-all">
+      {/* Top Telemetry Hairline Accent */}
+      <div className="h-[2px] w-full bg-gradient-to-r from-cyan-500 via-emerald-400 to-amber-400 opacity-90" />
+
       {/* Main Header & Navigation Bar */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
@@ -108,21 +114,22 @@ export const Navbar: React.FC<NavbarProps> = ({
             className="flex items-center gap-3 cursor-pointer group" 
             onClick={() => setCurrentTab(userRole === 'CITIZEN_VIEWER' ? 'gis' : 'dashboard')}
           >
-            <div className="relative w-10 h-10 rounded-xl bg-gradient-to-br from-[#5A5A40] via-[#4A4A33] to-[#363625] flex items-center justify-center text-[#FFF9EA] shadow-xs border border-[#707052]/50 group-hover:shadow-md transition-shadow">
-              <Layers className="w-5 h-5 text-[#EBE7DF]" />
-              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-[#82B37A] border-2 border-[#FAF8F5]" />
+            <div className="relative w-10 h-10 rounded-xl bg-gradient-to-br from-[#0F1D38] via-[#0E1526] to-[#070A12] flex items-center justify-center text-cyan-300 shadow-[0_0_15px_rgba(6,182,212,0.25)] border border-cyan-500/40 group-hover:border-cyan-400 group-hover:shadow-[0_0_20px_rgba(6,182,212,0.4)] transition-all">
+              <Layers className="w-5 h-5 text-cyan-400 group-hover:scale-110 transition-transform" />
+              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#10B981] border-2 border-[#070A12]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-base sm:text-lg font-bold tracking-tight text-[#33332A] natural-serif leading-tight">
+                <h1 className="text-base sm:text-lg font-bold tracking-tight text-slate-100 natural-serif leading-tight">
                   {t.appName}
                 </h1>
-                <span className="bg-[#FFF9EA] text-[#8B4513] text-[10px] font-semibold px-2 py-0.5 rounded-full border border-[#DCD7CE] uppercase tracking-wide">
-                  {t.versionBadge}
+                <span className="bg-cyan-950/80 text-cyan-300 text-[10px] font-mono font-semibold px-2 py-0.5 rounded-md border border-cyan-500/30 uppercase tracking-wider shadow-[0_0_10px_rgba(6,182,212,0.2)]">
+                  QUANTUM HUD
                 </span>
               </div>
-              <p className="text-[11px] text-[#5A5A40] font-medium leading-none mt-0.5">
-                {t.appSubtitle}
+              <p className="text-[11px] text-slate-400 font-medium leading-none mt-0.5 flex items-center gap-1.5">
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                <span>{t.appSubtitle}</span>
               </p>
             </div>
           </motion.div>
@@ -134,16 +141,16 @@ export const Navbar: React.FC<NavbarProps> = ({
               whileHover={{ y: -1 }}
               className="relative inline-block text-left"
             >
-              <div className="flex items-center gap-1.5 bg-[#EBE7DF]/80 hover:bg-[#E2DDD3] px-3 py-1.5 rounded-xl border border-[#DCD7CE] text-xs font-medium text-[#33332A] transition-colors shadow-2xs">
-                <Globe2 className="w-3.5 h-3.5 text-[#5A5A40]" />
+              <div className="flex items-center gap-1.5 bg-[#0E172A]/90 hover:bg-[#131F38] px-3 py-1.5 rounded-xl border border-cyan-500/30 text-xs font-medium text-slate-200 transition-colors shadow-[0_0_12px_rgba(6,182,212,0.1)]">
+                <Globe2 className="w-3.5 h-3.5 text-cyan-400" />
                 <select
                   aria-label="Select portal language"
                   value={selectedLanguage}
                   onChange={(e) => handleLanguageChange(e.target.value as IndicLanguage)}
-                  className="bg-transparent border-none outline-hidden cursor-pointer pr-1 font-medium text-[#33332A]"
+                  className="bg-transparent border-none outline-hidden cursor-pointer pr-1 font-medium text-slate-200"
                 >
                   {Object.entries(languageLabels).map(([key, lang]) => (
-                    <option key={key} value={key} className="bg-[#FAF8F5] text-[#33332A]">
+                    <option key={key} value={key} className="bg-[#0D1527] text-slate-200">
                       {lang.native} ({lang.english})
                     </option>
                   ))}
@@ -151,14 +158,14 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
             </motion.div>
 
-            {/* Authenticated Role Status Badge (Read-Only, no quick role changing) */}
+            {/* Authenticated Role Status Badge (Read-Only) */}
             <div 
-              className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FAF8F5] border border-[#DCD7CE] text-xs shadow-2xs"
+              className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0E172A]/90 border border-slate-700/80 text-xs text-slate-300 shadow-sm"
               title={`${t.currentRoleLabel}: ${roleLabel}`}
             >
-              <UserCheck className="w-3.5 h-3.5 text-[#8B4513] shrink-0" />
+              <UserCheck className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
               <div className="text-left leading-tight">
-                <span className="font-semibold text-[#4A3728] max-w-[160px] truncate block">
+                <span className="font-semibold text-slate-200 max-w-[160px] truncate block font-mono text-[11px]">
                   {roleLabel}
                 </span>
               </div>
@@ -168,14 +175,14 @@ export const Navbar: React.FC<NavbarProps> = ({
             {currentUser && (
               <motion.div 
                 whileHover={{ y: -1 }}
-                className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#FAF8F5] border border-[#DCD7CE] text-xs shadow-2xs"
+                className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#0E172A]/90 border border-slate-700/80 text-xs shadow-sm"
               >
-                <div className="w-6 h-6 rounded-full bg-[#5A5A40] text-[#FFF9EA] text-[10px] font-bold flex items-center justify-center shrink-0">
+                <div className="w-6 h-6 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/50 text-[10px] font-bold flex items-center justify-center shrink-0 shadow-[0_0_8px_rgba(6,182,212,0.3)]">
                   {currentUser.avatarInitials}
                 </div>
                 <div className="text-left leading-tight">
-                  <div className="font-bold text-[#33332A] truncate max-w-[120px]">{currentUser.name}</div>
-                  <div className="text-[10px] text-[#6B6B58] truncate max-w-[120px] font-mono">{currentUser.terminalId}</div>
+                  <div className="font-bold text-slate-100 truncate max-w-[120px]">{currentUser.name}</div>
+                  <div className="text-[10px] text-cyan-400/80 truncate max-w-[120px] font-mono">{currentUser.terminalId}</div>
                 </div>
               </motion.div>
             )}
@@ -187,17 +194,17 @@ export const Navbar: React.FC<NavbarProps> = ({
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => setIsLogoutConfirmOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[#DCD7CE] bg-[#FAF8F5] hover:bg-[#FDF0ED] hover:border-[#F2C2BA] text-xs font-semibold text-[#8B0000] transition-all shadow-2xs cursor-pointer group"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-rose-500/40 bg-rose-950/30 hover:bg-rose-900/50 hover:border-rose-400 text-xs font-semibold text-rose-300 transition-all shadow-[0_0_12px_rgba(244,63,94,0.15)] cursor-pointer group"
               title="Log out and exit from revenue portal"
             >
-              <LogOut className="w-3.5 h-3.5 text-[#8B0000] group-hover:-translate-x-0.5 transition-transform" />
+              <LogOut className="w-3.5 h-3.5 text-rose-400 group-hover:-translate-x-0.5 transition-transform" />
               <span className="hidden sm:inline">{t.logout}</span>
             </motion.button>
           </div>
         </div>
 
-        {/* Modern Animated Tab Navigation Menu */}
-        <nav className="flex space-x-1 sm:space-x-1.5 overflow-x-auto py-2 border-t border-[#DCD7CE]/70 scrollbar-none" aria-label="Tabs">
+        {/* Modern Cyber Segmented Tab Navigation Menu */}
+        <nav className="flex space-x-1 sm:space-x-1.5 overflow-x-auto py-2 border-t border-slate-800/80 scrollbar-none" aria-label="Tabs">
           {navTabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = currentTab === tab.id;
@@ -206,23 +213,25 @@ export const Navbar: React.FC<NavbarProps> = ({
                 key={tab.id}
                 id={`tab-btn-${tab.id}`}
                 onClick={() => setCurrentTab(tab.id)}
-                className={`relative flex items-center gap-2 px-3.5 py-2 text-xs sm:text-sm font-medium rounded-xl transition-colors whitespace-nowrap cursor-pointer z-10 ${
-                  isActive ? 'text-[#FFF9EA] font-semibold' : 'text-[#5A5A40] hover:text-[#33332A]'
+                className={`relative flex items-center gap-2 px-3.5 py-2 text-xs sm:text-sm font-medium rounded-xl transition-all whitespace-nowrap cursor-pointer z-10 ${
+                  isActive 
+                    ? 'text-cyan-300 font-semibold border border-cyan-400/40 shadow-[0_0_15px_rgba(6,182,212,0.25)]' 
+                    : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50'
                 }`}
               >
                 {isActive && (
                   <motion.div
                     layoutId="activeTabBadge"
-                    className="absolute inset-0 bg-[#5A5A40] rounded-xl shadow-xs -z-10"
+                    className="absolute inset-0 bg-gradient-to-r from-cyan-950/80 to-blue-950/80 rounded-xl -z-10"
                     transition={{ type: 'spring', bounce: 0.18, duration: 0.35 }}
                   />
                 )}
-                <Icon className={`w-4 h-4 transition-transform duration-200 ${isActive ? 'scale-105 text-[#FFF9EA]' : 'text-[#5A5A40]'}`} />
+                <Icon className={`w-4 h-4 transition-transform duration-200 ${isActive ? 'scale-105 text-cyan-400' : 'text-slate-400'}`} />
                 <span>{tab.label}</span>
                 {tab.count !== undefined && tab.count > 0 && (
                   <span className="relative flex items-center justify-center ml-1">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#E5C37A] opacity-50"></span>
-                    <span className="relative inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-[#8B4513] text-[#FFF9EA]">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-60"></span>
+                    <span className="relative inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-[0_0_8px_rgba(245,158,11,0.4)]">
                       {tab.count}
                     </span>
                   </span>
@@ -233,7 +242,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         </nav>
       </div>
 
-      {/* Logout Confirmation Dialog Modal with Spring Physics */}
+      {/* Logout Confirmation Dialog Modal with Cyber HUD styling */}
       <AnimatePresence>
         {isLogoutConfirmOpen && (
           <motion.div 
@@ -241,7 +250,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#33332A]/50 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md"
           >
             <motion.div 
               role="dialog"
@@ -251,10 +260,10 @@ export const Navbar: React.FC<NavbarProps> = ({
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.94, opacity: 0, y: 8 }}
               transition={{ type: 'spring', damping: 25, stiffness: 350 }}
-              className="bg-[#FAF8F5] rounded-2xl border border-[#DCD7CE] max-w-md w-full shadow-2xl p-6 space-y-4"
+              className="bg-[#0D1527] rounded-2xl border border-rose-500/40 max-w-md w-full shadow-[0_0_40px_rgba(244,63,94,0.25)] p-6 space-y-4 text-slate-200"
             >
               <div className="flex items-start justify-between">
-                <div className="w-11 h-11 rounded-xl bg-[#FDF0ED] border border-[#F2C2BA] text-[#8B0000] flex items-center justify-center shadow-2xs">
+                <div className="w-11 h-11 rounded-xl bg-rose-950/60 border border-rose-500/50 text-rose-400 flex items-center justify-center shadow-[0_0_15px_rgba(244,63,94,0.3)]">
                   <LogOut className="w-5 h-5" />
                 </div>
                 <motion.button
@@ -262,7 +271,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
                   onClick={() => setIsLogoutConfirmOpen(false)}
-                  className="text-[#6B6B58] hover:text-[#33332A] p-1.5 rounded-lg hover:bg-[#EBE7DF] cursor-pointer transition-colors"
+                  className="text-slate-400 hover:text-slate-100 p-1.5 rounded-lg hover:bg-slate-800 cursor-pointer transition-colors"
                   aria-label="Close dialog"
                 >
                   <X className="w-4 h-4" />
@@ -270,35 +279,35 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
 
               <div className="space-y-1">
-                <h3 id="logout-dialog-title" className="text-base font-bold text-[#33332A] natural-serif">
+                <h3 id="logout-dialog-title" className="text-base font-bold text-slate-100 natural-serif tracking-wide">
                   {t.logoutConfirmTitle}
                 </h3>
-                <p className="text-xs text-[#5A5A40] leading-relaxed">
+                <p className="text-xs text-slate-400 leading-relaxed">
                   {t.logoutConfirmDesc}
                 </p>
               </div>
 
               {currentUser && (
-                <div className="bg-[#F5F3EE] p-3.5 rounded-xl border border-[#DCD7CE] text-xs space-y-2">
+                <div className="bg-[#080E1C] p-3.5 rounded-xl border border-slate-800 text-xs space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-[#6B6B58]">Officer Name:</span>
-                    <span className="font-bold text-[#33332A]">{currentUser.name}</span>
+                    <span className="text-slate-400">Officer Name:</span>
+                    <span className="font-bold text-slate-200">{currentUser.name}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-[#6B6B58]">Designation:</span>
-                    <span className="font-medium text-[#4A3728] text-right truncate max-w-[200px]">{currentUser.designation}</span>
+                    <span className="text-slate-400">Designation:</span>
+                    <span className="font-medium text-cyan-300 text-right truncate max-w-[200px]">{currentUser.designation}</span>
                   </div>
-                  <div className="flex items-center justify-between font-mono text-[11px] pt-1 border-t border-[#DCD7CE]/60">
-                    <span className="text-[#6B6B58] flex items-center gap-1">
-                      <Terminal className="w-3 h-3" /> Terminal ID:
+                  <div className="flex items-center justify-between font-mono text-[11px] pt-1 border-t border-slate-800">
+                    <span className="text-slate-400 flex items-center gap-1">
+                      <Terminal className="w-3 h-3 text-cyan-400" /> Terminal ID:
                     </span>
-                    <span className="text-[#5A5A40] font-semibold">{currentUser.terminalId}</span>
+                    <span className="text-cyan-400 font-semibold">{currentUser.terminalId}</span>
                   </div>
                 </div>
               )}
 
-              <div className="text-[11px] text-[#8B4513] bg-[#FFF9EA] p-3 rounded-xl border border-[#DCD7CE] flex items-start gap-2.5">
-                <AlertTriangle className="w-4 h-4 text-[#8B4513] shrink-0 mt-0.5" />
+              <div className="text-[11px] text-amber-300 bg-amber-950/40 p-3 rounded-xl border border-amber-500/30 flex items-start gap-2.5">
+                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                 <span className="leading-snug">
                   Audit Trail Notice: Session logs, pending validation tokens, and cryptographic signatures have been registered with the Central Master Database.
                 </span>
@@ -309,7 +318,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   id="btn-cancel-logout"
                   type="button"
                   onClick={() => setIsLogoutConfirmOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-[#DCD7CE] bg-[#EBE7DF] hover:bg-[#E2DDD3] text-xs font-semibold text-[#33332A] cursor-pointer transition-colors shadow-2xs"
+                  className="px-4 py-2 rounded-xl border border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-xs font-semibold text-slate-200 cursor-pointer transition-colors shadow-sm"
                 >
                   {t.cancel}
                 </button>
@@ -320,7 +329,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     setIsLogoutConfirmOpen(false);
                     onLogout();
                   }}
-                  className="px-4 py-2 rounded-xl bg-[#8B0000] hover:bg-[#6D0000] text-[#FFF9EA] text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors"
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-[0_0_15px_rgba(244,63,94,0.4)] transition-all"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                   <span>{t.confirmLogout}</span>
