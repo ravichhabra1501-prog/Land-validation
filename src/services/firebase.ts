@@ -12,6 +12,15 @@ import firebaseConfig from '../../firebase-applet-config.json';
 import { ExtractedLandRecord, CitizenAppointment } from '../types';
 import { INITIAL_LAND_RECORDS } from '../data/sampleRecords';
 import { INITIAL_CITIZEN_APPOINTMENTS } from '../data/sampleAppointments';
+import { 
+  saveRecordsToLocalCache, 
+  loadRecordsFromLocalCache, 
+  saveAppointmentsToLocalCache, 
+  loadAppointmentsFromLocalCache, 
+  queueOfflineMutation,
+  getPendingOfflineMutations,
+  clearPendingOfflineMutations
+} from './offlineStorage';
 
 // Initialize Firebase App singleton
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
@@ -33,8 +42,8 @@ export async function testFirestoreConnection(): Promise<boolean> {
     console.info('Firebase Firestore connected successfully.');
     return true;
   } catch (error) {
-    if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.warn('Firebase Firestore: client is offline or network unreachable.');
+    if (error instanceof Error && (error.message.includes('offline') || error.message.includes('unavailable') || error.message.includes('network'))) {
+      console.warn('Firebase Firestore: client is offline or network unreachable. Falling back to local storage.');
       return false;
     }
     // Expected on initial setup if document doesn't exist, but server handshake succeeded
@@ -103,7 +112,7 @@ export async function seedInitialRecordsIfEmpty(): Promise<void> {
       console.info('Initial land records seeded.');
     }
   } catch (err) {
-    console.warn('Could not check or seed initial land records in Firestore:', err);
+    console.warn('Could not check or seed initial land records in Firestore (will use local storage):', err);
   }
 }
 
@@ -122,15 +131,15 @@ export async function seedInitialAppointmentsIfEmpty(): Promise<void> {
       console.info('Initial citizen appointments seeded.');
     }
   } catch (err) {
-    console.warn('Could not check or seed citizen appointments in Firestore:', err);
+    console.warn('Could not check or seed citizen appointments in Firestore (will use local storage):', err);
   }
 }
 
 /**
- * Real-time listener for Land Records from Firestore
+ * Real-time listener for Land Records from Firestore with automatic Local Storage Fallback
  */
 export function subscribeToLandRecords(
-  onRecordsUpdated: (records: ExtractedLandRecord[]) => void,
+  onRecordsUpdated: (records: ExtractedLandRecord[], source: 'CLOUD' | 'LOCAL_CACHE') => void,
   onError?: (err: Error) => void
 ): () => void {
   const colRef = collection(db, LAND_RECORDS_COLLECTION);
@@ -163,45 +172,70 @@ export function subscribeToLandRecords(
           mergedRecords.push(fsRec);
         });
 
-        onRecordsUpdated(mergedRecords);
+        // 1. Immediately backup all records to browser localStorage for offline fallback
+        saveRecordsToLocalCache(mergedRecords);
 
-        // Lazily sync missing initial records to Firestore in background
+        // 2. Dispatch updated records to the UI
+        onRecordsUpdated(mergedRecords, 'CLOUD');
+
+        // 3. Lazily sync missing initial records to Firestore in background
         if (missingInFirestore.length > 0) {
           saveBatchLandRecordsToFirestore(missingInFirestore).catch(e => {
             console.warn('Background sync of new initial records to Firestore:', e);
           });
         }
       } else {
-        // If empty, trigger seeding
+        // If empty, trigger seeding and cache
         seedInitialRecordsIfEmpty().then(() => {
-          onRecordsUpdated(INITIAL_LAND_RECORDS);
+          saveRecordsToLocalCache(INITIAL_LAND_RECORDS);
+          onRecordsUpdated(INITIAL_LAND_RECORDS, 'CLOUD');
+        }).catch(() => {
+          const cached = loadRecordsFromLocalCache() || INITIAL_LAND_RECORDS;
+          onRecordsUpdated(cached, 'LOCAL_CACHE');
         });
       }
     },
     (error) => {
-      console.warn('Firestore land records subscription error:', error);
+      console.warn('Firestore land records subscription encountered error/instability. Activating Local Storage fallback:', error);
+      // Fallback: load latest cached records from Local Storage immediately
+      const cached = loadRecordsFromLocalCache() || INITIAL_LAND_RECORDS;
+      onRecordsUpdated(cached, 'LOCAL_CACHE');
       onError?.(error);
     }
   );
 }
 
 /**
- * Persist or update a single Land Record in Firestore
+ * Persist or update a single Land Record in Firestore with Local Storage cache & queueing
  */
 export async function saveLandRecordToFirestore(record: ExtractedLandRecord): Promise<void> {
+  // Always update local storage cache immediately so UI and offline mode remain instant
+  const currentCached = loadRecordsFromLocalCache() || INITIAL_LAND_RECORDS;
+  const existingIdx = currentCached.findIndex(r => r.id === record.id);
+  const updatedCache = existingIdx >= 0
+    ? currentCached.map(r => r.id === record.id ? record : r)
+    : [record, ...currentCached];
+  saveRecordsToLocalCache(updatedCache);
+
   try {
     const docRef = doc(db, LAND_RECORDS_COLLECTION, record.id);
     await setDoc(docRef, sanitizeForFirestore(record), { merge: true });
   } catch (err) {
-    console.error('Error saving land record to Firestore:', err);
-    throw err;
+    console.warn('Firebase connection unstable: queued record update to offline pending queue:', err);
+    queueOfflineMutation('RECORD_UPDATE', record);
   }
 }
 
 /**
- * Persist batch updates of multiple Land Records in Firestore
+ * Persist batch updates of multiple Land Records in Firestore with Local Storage fallback
  */
 export async function saveBatchLandRecordsToFirestore(records: ExtractedLandRecord[]): Promise<void> {
+  // Update local cache first
+  const currentCached = loadRecordsFromLocalCache() || INITIAL_LAND_RECORDS;
+  const map = new Map<string, ExtractedLandRecord>(currentCached.map(r => [r.id, r]));
+  records.forEach(r => map.set(r.id, r));
+  saveRecordsToLocalCache(Array.from(map.values()));
+
   try {
     const promises = records.map((record) => {
       const docRef = doc(db, LAND_RECORDS_COLLECTION, record.id);
@@ -209,16 +243,16 @@ export async function saveBatchLandRecordsToFirestore(records: ExtractedLandReco
     });
     await Promise.all(promises);
   } catch (err) {
-    console.error('Error saving batch land records to Firestore:', err);
-    throw err;
+    console.warn('Firebase batch update failed or unstable: queued to offline storage:', err);
+    queueOfflineMutation('RECORD_BATCH', records);
   }
 }
 
 /**
- * Real-time listener for Citizen Appointments from Firestore
+ * Real-time listener for Citizen Appointments from Firestore with Local Storage fallback
  */
 export function subscribeToCitizenAppointments(
-  onAppointmentsUpdated: (appointments: CitizenAppointment[]) => void,
+  onAppointmentsUpdated: (appointments: CitizenAppointment[], source: 'CLOUD' | 'LOCAL_CACHE') => void,
   onError?: (err: Error) => void
 ): () => void {
   const colRef = collection(db, CITIZEN_APPOINTMENTS_COLLECTION);
@@ -230,29 +264,89 @@ export function subscribeToCitizenAppointments(
         snapshot.forEach((d) => {
           appointments.push(d.data() as CitizenAppointment);
         });
-        onAppointmentsUpdated(appointments);
+        saveAppointmentsToLocalCache(appointments);
+        onAppointmentsUpdated(appointments, 'CLOUD');
       } else {
         seedInitialAppointmentsIfEmpty().then(() => {
-          onAppointmentsUpdated(INITIAL_CITIZEN_APPOINTMENTS);
+          saveAppointmentsToLocalCache(INITIAL_CITIZEN_APPOINTMENTS);
+          onAppointmentsUpdated(INITIAL_CITIZEN_APPOINTMENTS, 'CLOUD');
+        }).catch(() => {
+          const cached = loadAppointmentsFromLocalCache() || INITIAL_CITIZEN_APPOINTMENTS;
+          onAppointmentsUpdated(cached, 'LOCAL_CACHE');
         });
       }
     },
     (error) => {
-      console.warn('Firestore appointments subscription error:', error);
+      console.warn('Firestore appointments subscription error/unstable. Using Local Storage fallback:', error);
+      const cached = loadAppointmentsFromLocalCache() || INITIAL_CITIZEN_APPOINTMENTS;
+      onAppointmentsUpdated(cached, 'LOCAL_CACHE');
       onError?.(error);
     }
   );
 }
 
 /**
- * Persist or update a single Citizen Appointment in Firestore
+ * Persist or update a single Citizen Appointment in Firestore with Local Storage caching
  */
 export async function saveCitizenAppointmentToFirestore(appointment: CitizenAppointment): Promise<void> {
+  const currentCached = loadAppointmentsFromLocalCache() || INITIAL_CITIZEN_APPOINTMENTS;
+  const existingIdx = currentCached.findIndex(a => a.id === appointment.id);
+  const updatedCache = existingIdx >= 0
+    ? currentCached.map(a => a.id === appointment.id ? appointment : a)
+    : [appointment, ...currentCached];
+  saveAppointmentsToLocalCache(updatedCache);
+
   try {
     const docRef = doc(db, CITIZEN_APPOINTMENTS_COLLECTION, appointment.id);
     await setDoc(docRef, appointment, { merge: true });
   } catch (err) {
-    console.error('Error saving citizen appointment to Firestore:', err);
-    throw err;
+    console.warn('Firebase offline: queued appointment update to offline queue:', err);
+    queueOfflineMutation('APPOINTMENT_CREATE', appointment);
   }
+}
+
+/**
+ * Synchronize any pending offline mutations back to Firestore when connection stabilizes
+ */
+export async function syncPendingOfflineMutationsToFirestore(): Promise<{ syncedCount: number; errors: string[] }> {
+  const pending = getPendingOfflineMutations();
+  if (pending.length === 0) {
+    return { syncedCount: 0, errors: [] };
+  }
+
+  console.info(`Attempting to sync ${pending.length} pending offline mutations to Firestore...`);
+  let successCount = 0;
+  const errors: string[] = [];
+
+  for (const mutation of pending) {
+    try {
+      if (mutation.type === 'RECORD_UPDATE' || mutation.type === 'RECORD_CREATE') {
+        const rec = mutation.payload as ExtractedLandRecord;
+        const docRef = doc(db, LAND_RECORDS_COLLECTION, rec.id);
+        await setDoc(docRef, sanitizeForFirestore(rec), { merge: true });
+        successCount++;
+      } else if (mutation.type === 'RECORD_BATCH') {
+        const records = mutation.payload as ExtractedLandRecord[];
+        for (const rec of records) {
+          const docRef = doc(db, LAND_RECORDS_COLLECTION, rec.id);
+          await setDoc(docRef, sanitizeForFirestore(rec), { merge: true });
+        }
+        successCount++;
+      } else if (mutation.type === 'APPOINTMENT_CREATE' || mutation.type === 'APPOINTMENT_UPDATE') {
+        const apt = mutation.payload as CitizenAppointment;
+        const docRef = doc(db, CITIZEN_APPOINTMENTS_COLLECTION, apt.id);
+        await setDoc(docRef, apt, { merge: true });
+        successCount++;
+      }
+    } catch (err: any) {
+      errors.push(`Failed mutation ${mutation.id}: ${err?.message || 'Unknown error'}`);
+    }
+  }
+
+  if (errors.length === 0) {
+    clearPendingOfflineMutations();
+    console.info(`Successfully synchronized all ${successCount} offline changes to Firestore.`);
+  }
+
+  return { syncedCount: successCount, errors };
 }

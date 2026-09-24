@@ -27,11 +27,14 @@ import {
   Stamp,
   History,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Printer
 } from 'lucide-react';
 import { ExtractedLandRecord, UserRole, RecordModificationEntry, ChangeLogEntry } from '../types';
 import { runAutomatedValidationRules, generateDilrmpXml } from '../services/landRecordService';
 import { ModificationHistoryModal } from './ModificationHistoryModal';
+import { OfficialArchivalDossierModal } from './OfficialArchivalDossierModal';
+import { generateOfficialArchivalPdf } from '../services/archivalPdfService';
 import { getRecordModificationHistory } from '../utils/modificationHistoryUtils';
 import { getRecordChangeLog } from '../utils/changeLogUtils';
 import { RecordChangeLogTimeline } from './RecordChangeLogTimeline';
@@ -74,6 +77,9 @@ export const VerificationStationView: React.FC<VerificationStationViewProps> = (
 
   // Modification History Modal State
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState<boolean>(false);
+
+  // Official Archival Printable PDF Dossier Modal State
+  const [isArchivalModalOpen, setIsArchivalModalOpen] = useState<boolean>(false);
 
   // Active Station Tab in Right Pane: 'FIELDS' or 'CHANGELOG'
   const [stationTab, setStationTab] = useState<'FIELDS' | 'CHANGELOG'>('FIELDS');
@@ -600,6 +606,16 @@ export const VerificationStationView: React.FC<VerificationStationViewProps> = (
           </button>
 
           <button
+            id="btn-archival-pdf-top"
+            onClick={() => setIsArchivalModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#8B4513]/40 bg-[#FFF9EA] hover:bg-[#F7EED8] text-xs font-bold text-[#8B4513] transition-colors cursor-pointer shadow-2xs"
+            title="Generate printable PDF of current land record details formatted for official archival submission"
+          >
+            <Printer className="w-3.5 h-3.5 text-[#8B4513]" />
+            <span>Archival PDF Dossier</span>
+          </button>
+
+          <button
             id="btn-export-xml"
             onClick={handleDownloadXml}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#DCD7CE] bg-[#F5F3EE] hover:bg-[#EBE7DF] text-xs font-semibold text-[#33332A] transition-colors cursor-pointer"
@@ -831,6 +847,17 @@ export const VerificationStationView: React.FC<VerificationStationViewProps> = (
                 >
                   <MapPin className="w-3.5 h-3.5 text-[#8B4513]" />
                   <span>Cadastral Map</span>
+                </button>
+
+                {/* Printable Archival PDF Button */}
+                <button
+                  id="btn-print-archival-pdf-pane"
+                  onClick={() => setIsArchivalModalOpen(true)}
+                  className="px-3 py-1.5 rounded-lg border border-[#8B4513]/40 bg-[#FFF9EA] hover:bg-[#F7EED8] text-xs font-bold text-[#8B4513] transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                  title="Generate printable PDF of current land record details formatted for official archival submission"
+                >
+                  <Printer className="w-3.5 h-3.5 text-[#8B4513]" />
+                  <span className="hidden sm:inline">Archival PDF</span>
                 </button>
 
                 {/* Primary Sanction Button */}
@@ -1684,6 +1711,14 @@ export const VerificationStationView: React.FC<VerificationStationViewProps> = (
         record={selectedRecord}
         userRole={userRole}
         onAddModification={handleAddModification}
+      />
+
+      {/* Official Archival Printable PDF Dossier Modal */}
+      <OfficialArchivalDossierModal
+        isOpen={isArchivalModalOpen}
+        onClose={() => setIsArchivalModalOpen(false)}
+        record={selectedRecord}
+        userRole={userRole}
       />
     </div>
   );

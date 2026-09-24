@@ -1,5 +1,6 @@
 import { ExtractedLandRecord } from '../types';
 import { ADDITIONAL_CADASTRAL_PLOTS, ADDITIONAL_VILLAGE_CENTERS, ADDITIONAL_VILLAGE_INFRASTRUCTURE } from './additionalCadastralPlots';
+import { NEW_CADASTRAL_PLOTS, NEW_VILLAGE_CENTERS, NEW_VILLAGE_INFRASTRUCTURE } from './newRevenueVillagesCadastralPlots';
 
 export interface CadastralPlot {
   id: string;
@@ -1473,7 +1474,8 @@ export const CADASTRAL_PLOTS: CadastralPlot[] = [
   "surveyDate": "1988 SVAMITVA Drone Orthophoto Verification - Jan 2026",
   "benchmarkBearing": "N 52° 15' W"
 },
-  ...ADDITIONAL_CADASTRAL_PLOTS
+  ...ADDITIONAL_CADASTRAL_PLOTS,
+  ...NEW_CADASTRAL_PLOTS
 ];
 
 export const VILLAGE_INFRASTRUCTURE: Record<string, { canals?: Array<Array<{ lat: number; lng: number }>>; roads?: Array<Array<{ lat: number; lng: number }>> }> = {
@@ -1603,7 +1605,8 @@ export const VILLAGE_INFRASTRUCTURE: Record<string, { canals?: Array<Array<{ lat
       ]
     ]
   },
-  ...ADDITIONAL_VILLAGE_INFRASTRUCTURE
+  ...ADDITIONAL_VILLAGE_INFRASTRUCTURE,
+  ...NEW_VILLAGE_INFRASTRUCTURE
 };
 
 export const VILLAGE_CENTERS: Record<string, { lat: number; lng: number; zoom: number; label: string; state: string; district: string; tehsil: string }> = {
@@ -1688,6 +1691,7 @@ export const VILLAGE_CENTERS: Record<string, { lat: number; lng: number; zoom: n
     district: 'Karnal',
     tehsil: 'Nilokheri'
   },
-  ...ADDITIONAL_VILLAGE_CENTERS
+  ...ADDITIONAL_VILLAGE_CENTERS,
+  ...NEW_VILLAGE_CENTERS
 };
 

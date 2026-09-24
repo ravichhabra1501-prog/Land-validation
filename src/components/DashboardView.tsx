@@ -50,6 +50,8 @@ import { ValidationTrendSparkline, MicroSparkline } from './ValidationTrendSpark
 import { StateFormatsDirectoryModal } from './StateFormatsDirectoryModal';
 import { LandRecordLedgerTable } from './LandRecordLedgerTable';
 import { LandRecordCardGrid } from './LandRecordCardGrid';
+import { VillageDigitizationBarChartWidget } from './VillageDigitizationBarChartWidget';
+import { VillageSpecificationModal } from './VillageSpecificationModal';
 import { getTranslations } from '../utils/translations';
 
 interface DashboardViewProps {
@@ -90,6 +92,28 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const [confirmModalStatus, setConfirmModalStatus] = useState<VerificationStatus | null>(null);
   const [officerRemark, setOfficerRemark] = useState('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Revenue Village Specification Modal state
+  const [isVillageModalOpen, setIsVillageModalOpen] = useState(false);
+  const [selectedVillageForModal, setSelectedVillageForModal] = useState('Wagholi');
+
+  const handleFilterByVillage = (villageName: string) => {
+    setSearchQuery(villageName);
+    setSelectedStateFilter('ALL');
+    setSelectedFormatFilter('ALL');
+    setSelectedStatusFilter('ALL');
+    setToastMessage(`Filtered ingestion queue to revenue village: ${villageName}`);
+    setTimeout(() => setToastMessage(null), 3500);
+    const queueElement = document.getElementById('section-ingestion-queue');
+    if (queueElement) {
+      queueElement.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  const handleOpenVillageModal = (villageName: string) => {
+    setSelectedVillageForModal(villageName);
+    setIsVillageModalOpen(true);
+  };
 
   const totalRecords = records.length;
   const verifiedCount = records.filter(r => r.status === 'VERIFIED_AND_SANCTIONED').length;
@@ -482,6 +506,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </motion.div>
       </motion.div>
 
+      {/* 30-Day Revenue Village Digitization Summary Bar Chart Widget */}
+      <VillageDigitizationBarChartWidget
+        records={records}
+        onFilterVillage={handleFilterByVillage}
+        onOpenVillageModal={handleOpenVillageModal}
+      />
+
       {/* 365-Day Land Record Validation Trend Sparkline Chart */}
       <ValidationTrendSparkline 
         records={records} 
@@ -492,7 +523,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       <div className={`grid grid-cols-1 ${isFullWidthLedger ? 'lg:grid-cols-1' : 'lg:grid-cols-3'} gap-6`}>
         {/* Left Cols: Ingestion & Verification Queue */}
         <div className={`${isFullWidthLedger ? 'lg:col-span-1' : 'lg:col-span-2'} space-y-4`}>
-          <div className="bg-[#FAF8F5] rounded-xl border border-[#DCD7CE] p-4 sm:p-5 shadow-2xs">
+          <div id="section-ingestion-queue" className="bg-[#FAF8F5] rounded-xl border border-[#DCD7CE] p-4 sm:p-5 shadow-2xs">
             <div className="flex flex-col gap-3 pb-4 border-b border-[#DCD7CE]">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
@@ -1347,6 +1378,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           setSelectedStateFilter(stateName);
           setCurrentPage(1);
         }}
+      />
+
+      {/* Revenue Village Specification Dossier Modal */}
+      <VillageSpecificationModal
+        isOpen={isVillageModalOpen}
+        onClose={() => setIsVillageModalOpen(false)}
+        currentVillageName={selectedVillageForModal}
       />
     </div>
   );

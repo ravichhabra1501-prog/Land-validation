@@ -34,6 +34,8 @@ import { ExtractedLandRecord, UserRole, AuthUser } from '../types';
 import { CadastralGoogleMapView } from './CadastralGoogleMapView';
 import { DigitizedRecordDossier } from './DigitizedRecordDossier';
 import { CADASTRAL_PLOTS, CadastralPlot, VILLAGE_CENTERS } from '../data/cadastralPlotsData';
+import { getRevenueVillageSpecification } from '../data/revenueVillageSpecifications';
+import { VillageSpecificationModal } from './VillageSpecificationModal';
 import { 
   calculateBoundarySegments, 
   calculatePerimeterMeters,
@@ -82,6 +84,7 @@ export const CadastralGisView: React.FC<CadastralGisViewProps> = ({
     : 'Wagholi';
 
   const [activeVillage, setActiveVillage] = useState<string>(initialVillage);
+  const [isVillageSpecModalOpen, setIsVillageSpecModalOpen] = useState<boolean>(false);
   const [selectedPlotKhasra, setSelectedPlotKhasra] = useState<string>(
     isCitizen ? citizenKhasra : (selectedRecord?.khasraNumber?.value || '142/1')
   );
@@ -350,6 +353,18 @@ export const CadastralGisView: React.FC<CadastralGisViewProps> = ({
                     </option>
                   ))}
                 </select>
+
+                <button
+                  id="btn-view-village-specs"
+                  type="button"
+                  onClick={() => setIsVillageSpecModalOpen(true)}
+                  className="ml-1 px-2.5 py-1 rounded-md bg-[#8B4513] hover:bg-[#6D340E] text-[#FFF9EA] font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs shrink-0"
+                  title="View full agro-climatic, tenurial, and cadastral specifications for this village"
+                >
+                  <Compass className="w-3.5 h-3.5 text-[#E5C37A]" />
+                  <span className="hidden sm:inline">Specifications</span>
+                  <span className="sm:hidden">Specs</span>
+                </button>
               </div>
             )}
 
@@ -385,6 +400,15 @@ export const CadastralGisView: React.FC<CadastralGisViewProps> = ({
                       ? 'Cadastral'
                       : 'Disputes'}
                   </span>
+                  {layer === 'plain' && (
+                    <span className={`text-[9px] font-mono px-1 py-0.2 rounded font-semibold ${
+                      activeLayer === 'plain'
+                        ? 'bg-black/25 text-[#E5C37A]'
+                        : 'bg-[#DCD7CE] text-[#5A5A40]'
+                    }`}>
+                      No Key
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
@@ -481,6 +505,45 @@ export const CadastralGisView: React.FC<CadastralGisViewProps> = ({
             </div>
           </div>
         )}
+
+        {/* Dynamic Village Specification Quick Strip */}
+        {(() => {
+          const villageSpec = getRevenueVillageSpecification(activeVillage);
+          return (
+            <div className="pt-2 border-t border-[#DCD7CE] flex flex-wrap items-center justify-between gap-2.5 text-xs">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-bold text-[#2C3E2D] flex items-center gap-1">
+                  <Compass className="w-3.5 h-3.5 text-[#8B4513]" />
+                  <span>{villageSpec.villageName} ({villageSpec.vernacularName})</span>
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#EAF2EB] text-[#2D4A30] border border-[#BCD4C0]">
+                  LGD: {villageSpec.censusVillageCode}
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#FFF2E5] text-[#7D3C00] border border-[#F0C9A5]">
+                  {villageSpec.terrainType.replace(/_/g, ' ')}
+                </span>
+                <span className="hidden md:inline px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#FAF8F5] text-[#4A3728] border border-[#DCD7CE]">
+                  🌱 {villageSpec.dominantSoils[0]?.name || 'Alluvial'}
+                </span>
+                <span className="hidden lg:inline px-2 py-0.5 rounded-full text-[10px] font-mono text-[#8B4513] bg-[#FFF9EA] border border-[#DCD7CE]">
+                  📐 {villageSpec.primaryLocalUnit} ({villageSpec.localUnitToSqM} m²)
+                </span>
+                <span className="hidden xl:inline px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#EDF5FD] text-[#1B4B75] border border-[#BBD7F2]">
+                  💧 {villageSpec.irrigationInfrastructure.primarySource.slice(0, 38)}...
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsVillageSpecModalOpen(true)}
+                className="text-[11px] font-bold text-[#8B4513] hover:text-[#6D340E] hover:underline flex items-center gap-1 cursor-pointer ml-auto"
+              >
+                <span>Full Agro-Cadastral Dossier &amp; Calculator</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          );
+        })()}
       </div>
 
       {/* MODE 1: SPLIT-SCREEN COMPARISON VIEW (Record Details Left 50% ↔ Spatial Map Right 50%) */}
@@ -1261,6 +1324,14 @@ export const CadastralGisView: React.FC<CadastralGisViewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Revenue Village Specification Dossier Modal */}
+      <VillageSpecificationModal
+        isOpen={isVillageSpecModalOpen}
+        onClose={() => setIsVillageSpecModalOpen(false)}
+        currentVillageName={activeVillage}
+        onSelectVillage={(v) => handleVillageChange(v)}
+      />
     </div>
   );
 };

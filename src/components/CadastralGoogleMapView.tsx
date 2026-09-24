@@ -1,13 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import L from 'leaflet';
 import { 
-  APIProvider, 
-  Map as GoogleMap, 
-  Polygon as GooglePolygon, 
-  AdvancedMarker, 
-  InfoWindow as GoogleInfoWindow 
-} from '@vis.gl/react-google-maps';
-import { 
   Layers, 
   Eye, 
   Maximize2, 
@@ -165,7 +158,6 @@ export const CadastralGoogleMapView: React.FC<CadastralGoogleMapViewProps> = ({
   }, [activeLayer]);
 
   const [cursorCoords, setCursorCoords] = useState<{ lat: number; lng: number } | null>(null);
-  const [useJsSdk, setUseJsSdk] = useState<boolean>(false);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [showDimensions, setShowDimensions] = useState<boolean>(true);
   const [isScheduleDrawerOpen, setIsScheduleDrawerOpen] = useState<boolean>(true);
@@ -173,13 +165,31 @@ export const CadastralGoogleMapView: React.FC<CadastralGoogleMapViewProps> = ({
 
   const selectedDimensions = calculateLandScheduleDimensions(selectedPlot.coordinates);
 
-  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+  // 100% Autonomous Offline Cadastral Drafting Sheet - Zero API Key, Zero Network Latency, Pure Vector Aks Shajra Canvas
+  const DILRMP_PLAIN_DRAFTING_TILE = 'data:image/svg+xml;utf8,' + encodeURIComponent(`
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <rect width="256" height="256" fill="#FAF8F5"/>
+  <!-- Fine 32px Cadastral Drafting Micro-Mesh -->
+  <path d="M 32 0 v 256 M 64 0 v 256 M 96 0 v 256 M 128 0 v 256 M 160 0 v 256 M 192 0 v 256 M 224 0 v 256 M 0 32 h 256 M 0 64 h 256 M 0 96 h 256 M 0 128 h 256 M 0 160 h 256 M 0 192 h 256 M 0 224 h 256" 
+        stroke="#EFECE3" stroke-width="0.5" fill="none"/>
+  <!-- Primary 128px Survey Quadrant Line -->
+  <path d="M 128 0 v 256 M 0 128 h 256" stroke="#E2DCD0" stroke-width="0.8" fill="none" stroke-dasharray="4,4"/>
+  <!-- 256px Sheet Boundary Line -->
+  <path d="M 256 0 H 0 V 256" stroke="#D7CFC0" stroke-width="1" fill="none"/>
+  <!-- Geodetic Intersect Cross Ticks -->
+  <path d="M 124 128 h 8 M 128 124 v 8" stroke="#C4B9A2" stroke-width="1.2" fill="none"/>
+  <circle cx="128" cy="128" r="1.5" fill="#A89B80"/>
+  <circle cx="64" cy="64" r="1.2" fill="#D3C9B4"/>
+  <circle cx="192" cy="192" r="1.2" fill="#D3C9B4"/>
+  <circle cx="64" cy="192" r="1.2" fill="#D3C9B4"/>
+  <circle cx="192" cy="64" r="1.2" fill="#D3C9B4"/>
+</svg>`.trim());
 
-  // Tile layer URLs
+  // Tile layer URLs - Plain Model is 100% standalone, requiring zero API keys and zero external network calls
   const getTileUrl = (type: MapLayerType) => {
     switch (type) {
       case 'plain-structure':
-        return 'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png';
+        return DILRMP_PLAIN_DRAFTING_TILE;
       case 'google-hybrid':
         return 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}';
       case 'google-satellite':
@@ -194,7 +204,7 @@ export const CadastralGoogleMapView: React.FC<CadastralGoogleMapViewProps> = ({
 
   const getTileAttribution = (type: MapLayerType) => {
     if (type === 'plain-structure') {
-      return '&copy; CartoDB &bull; OpenStreetMap contributors &bull; DILRMP Plain Cadastral Shajra';
+      return 'DILRMP Autonomous Cadastral Vector Shajra &bull; Standalone Engine (Zero API Key Required)';
     }
     if (type === 'esri-satellite') {
       return 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community';
@@ -204,7 +214,7 @@ export const CadastralGoogleMapView: React.FC<CadastralGoogleMapViewProps> = ({
 
   // 1. Initialize Leaflet Map once container is mounted
   useEffect(() => {
-    if (useJsSdk || !mapContainerRef.current) return;
+    if (!mapContainerRef.current) return;
 
     if (leafletMapRef.current) {
       leafletMapRef.current.remove();
@@ -228,10 +238,11 @@ export const CadastralGoogleMapView: React.FC<CadastralGoogleMapViewProps> = ({
     plainPane.style.pointerEvents = 'none';
 
     // Add initial Tile Layer with robust error fallback
+    const isPlain = activeTileType === 'plain-structure';
     const tileLayer = L.tileLayer(getTileUrl(activeTileType), {
       maxZoom: 21,
       maxNativeZoom: 19,
-      subdomains: activeTileType === 'plain-structure' ? ['a', 'b', 'c', 'd'] : ['mt0', 'mt1', 'mt2', 'mt3'],
+      subdomains: isPlain ? [] : ['mt0', 'mt1', 'mt2', 'mt3'],
       attribution: getTileAttribution(activeTileType)
     });
 
@@ -239,7 +250,7 @@ export const CadastralGoogleMapView: React.FC<CadastralGoogleMapViewProps> = ({
     tileLayer.on('tileerror', (e) => {
       const img = (e as any).tile as HTMLImageElement;
       if (img) {
-        img.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" fill="%23FAF8F5"><rect width="256" height="256" fill="%23FAF8F5"/><path d="M0 0h256v256H0z" fill="none" stroke="%23EBE7DF" stroke-width="0.5"/></svg>';
+        img.src = DILRMP_PLAIN_DRAFTING_TILE;
       }
     });
 
@@ -286,37 +297,38 @@ export const CadastralGoogleMapView: React.FC<CadastralGoogleMapViewProps> = ({
       map.remove();
       leafletMapRef.current = null;
     };
-  }, [useJsSdk]);
+  }, []);
 
   // 2. Update Tile Layer when user switches Map Type
   useEffect(() => {
-    if (!leafletMapRef.current || useJsSdk) return;
+    if (!leafletMapRef.current) return;
 
     if (tileLayerRef.current) {
       leafletMapRef.current.removeLayer(tileLayerRef.current);
     }
 
+    const isPlain = activeTileType === 'plain-structure';
     const newTile = L.tileLayer(getTileUrl(activeTileType), {
       maxZoom: 21,
       maxNativeZoom: 19,
-      subdomains: activeTileType === 'plain-structure' ? ['a', 'b', 'c', 'd'] : ['mt0', 'mt1', 'mt2', 'mt3'],
+      subdomains: isPlain ? [] : ['mt0', 'mt1', 'mt2', 'mt3'],
       attribution: getTileAttribution(activeTileType)
     });
 
     newTile.on('tileerror', (e) => {
       const img = (e as any).tile as HTMLImageElement;
       if (img) {
-        img.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" fill="%23FAF8F5"><rect width="256" height="256" fill="%23FAF8F5"/><path d="M0 0h256v256H0z" fill="none" stroke="%23EBE7DF" stroke-width="0.5"/></svg>';
+        img.src = DILRMP_PLAIN_DRAFTING_TILE;
       }
     });
 
     newTile.addTo(leafletMapRef.current);
     tileLayerRef.current = newTile;
-  }, [activeTileType, useJsSdk]);
+  }, [activeTileType]);
 
   // 3. Render Cadastral Parcel Polygons, Hover States, and Centroid Badges
   useEffect(() => {
-    if (!leafletMapRef.current || !polygonsGroupRef.current || !markersGroupRef.current || useJsSdk) return;
+    if (!leafletMapRef.current || !polygonsGroupRef.current || !markersGroupRef.current) return;
 
     const polyGroup = polygonsGroupRef.current;
     const markGroup = markersGroupRef.current;
@@ -603,12 +615,12 @@ export const CadastralGoogleMapView: React.FC<CadastralGoogleMapViewProps> = ({
       }
     }
 
-  }, [plots, selectedPlot, activeLayer, cadastralOpacity, showLabels, showDimensions, isPlainStructure, useJsSdk, highlightedKhasras, records]);
+  }, [plots, selectedPlot, activeLayer, cadastralOpacity, showLabels, showDimensions, isPlainStructure, highlightedKhasras, records]);
 
 
   // 4. Render Infrastructure (Canals and Chak Marg Roads)
   useEffect(() => {
-    if (!leafletMapRef.current || !infrastructureGroupRef.current || useJsSdk) return;
+    if (!leafletMapRef.current || !infrastructureGroupRef.current) return;
 
     const infraGroup = infrastructureGroupRef.current;
     infraGroup.clearLayers();
@@ -647,11 +659,11 @@ export const CadastralGoogleMapView: React.FC<CadastralGoogleMapViewProps> = ({
         infraGroup.addLayer(polyline);
       });
     }
-  }, [selectedPlot.village, showRoads, showWaterbodies, useJsSdk]);
+  }, [selectedPlot.village, showRoads, showWaterbodies]);
 
   // 5. Render Cadastral Survey Metric Coordinate Grid across FULL MAP FORMATIONS (Satellite, Plain, Soils, Cadastral, Disputes)
   useEffect(() => {
-    if (!leafletMapRef.current || !gridGroupRef.current || useJsSdk) return;
+    if (!leafletMapRef.current || !gridGroupRef.current) return;
 
     const map = leafletMapRef.current;
     const gridGroup = gridGroupRef.current;
@@ -965,11 +977,11 @@ export const CadastralGoogleMapView: React.FC<CadastralGoogleMapViewProps> = ({
       map.off('moveend', renderFullFormationGrid);
       map.off('zoomend', renderFullFormationGrid);
     };
-  }, [showGrid, gridInterval, isPlainStructure, activeLayer, plots, selectedPlot.village, selectedPlot.centroid.lat, selectedPlot.centroid.lng, useJsSdk]);
+  }, [showGrid, gridInterval, isPlainStructure, activeLayer, plots, selectedPlot.village, selectedPlot.centroid.lat, selectedPlot.centroid.lng]);
 
   // 6. Render Plain Structure Details: Boundary Corner Stones (मुनारा Pillars) & Triangulation Tie-Lines (कर्ण रेखा)
   useEffect(() => {
-    if (!leafletMapRef.current || !plainStructureGroupRef.current || useJsSdk) return;
+    if (!leafletMapRef.current || !plainStructureGroupRef.current) return;
 
     const plainGroup = plainStructureGroupRef.current;
     plainGroup.clearLayers();
@@ -1076,11 +1088,11 @@ export const CadastralGoogleMapView: React.FC<CadastralGoogleMapViewProps> = ({
       }
     }
 
-  }, [isPlainStructure, selectedPlot, useJsSdk]);
+  }, [isPlainStructure, selectedPlot]);
 
   // 7. Smooth pan or flyTo to selected plot centroid when changed
   useEffect(() => {
-    if (!leafletMapRef.current || useJsSdk) return;
+    if (!leafletMapRef.current) return;
     const currentCenter = leafletMapRef.current.getCenter();
     const distance = Math.hypot(
       currentCenter.lat - selectedPlot.centroid.lat,
@@ -1101,7 +1113,7 @@ export const CadastralGoogleMapView: React.FC<CadastralGoogleMapViewProps> = ({
         { animate: true, duration: 0.6 }
       );
     }
-  }, [selectedPlot.centroid.lat, selectedPlot.centroid.lng, useJsSdk]);
+  }, [selectedPlot.centroid.lat, selectedPlot.centroid.lng]);
 
   // Zoom handlers
   const handleZoomIn = () => {
@@ -1160,10 +1172,13 @@ export const CadastralGoogleMapView: React.FC<CadastralGoogleMapViewProps> = ({
                 ? 'bg-[#8B4513] text-[#FFF9EA] shadow-2xs font-bold border border-[#A0522D]'
                 : 'text-[#D7D2C5] hover:text-[#FFF9EA]'
             }`}
-            title="Plain Drafting Ink Shajra Sheet (सादा भू-नक्शा)"
+            title="Plain Drafting Ink Shajra Sheet (सादा भू-नक्शा) - Standalone Vector Engine (Zero API Key Required)"
           >
             <LayoutGrid className="w-3 h-3 text-[#E5C37A]" />
             <span>Plain (सादा)</span>
+            <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-black/30 text-emerald-300 border border-emerald-500/30">
+              No API Key
+            </span>
           </button>
 
           <button
@@ -1328,6 +1343,12 @@ export const CadastralGoogleMapView: React.FC<CadastralGoogleMapViewProps> = ({
                 ? 'Disputed Parcel & Litigation Model'
                 : 'Full Satellite Formation'}
             </span>
+            {activeLayer === 'plain' && (
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-700/50 flex items-center gap-1 font-semibold">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                Zero API Key &bull; Standalone Shajra
+              </span>
+            )}
             {showGrid && (
               <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${
                 activeLayer === 'satellite' ? 'bg-amber-950/60 text-amber-300 border-amber-700/50' :
@@ -1598,7 +1619,14 @@ export const CadastralGoogleMapView: React.FC<CadastralGoogleMapViewProps> = ({
       <div className="absolute bottom-3 right-3 z-400 bg-[#26261A]/92 backdrop-blur-md p-2.5 rounded-xl border border-[#52523C] text-[10px] text-[#EBE7DF] shadow-lg space-y-1.5 min-w-[200px]">
         <div className="flex items-center justify-between pb-1 border-b border-[#43432F] text-[9.5px]">
           <span className="font-bold text-[#E5C37A] uppercase tracking-wider">Formation Model:</span>
-          <span className="font-mono text-[#FFF9EA] font-semibold uppercase">{activeLayer}</span>
+          <div className="flex items-center gap-1">
+            <span className="font-mono text-[#FFF9EA] font-semibold uppercase">{activeLayer}</span>
+            {activeLayer === 'plain' && (
+              <span className="text-[8.5px] font-mono text-emerald-400 font-bold bg-emerald-950/80 px-1 py-0.2 rounded border border-emerald-700/40">
+                NO KEY REQ
+              </span>
+            )}
+          </div>
         </div>
 
         <div className="flex items-center gap-2">

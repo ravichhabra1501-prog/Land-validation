@@ -4,14 +4,16 @@ import { UNIQUE_RECORDS_WEST } from './uniqueRecordsWest';
 import { UNIQUE_RECORDS_SOUTH } from './uniqueRecordsSouth';
 import { UNIQUE_RECORDS_CENTRAL } from './uniqueRecordsCentral';
 import { UNIQUE_RECORDS_EAST } from './uniqueRecordsEast';
+import { NEW_VILLAGE_LAND_RECORDS } from './newRevenueVillagesCadastralPlots';
 
-// Consolidated globally unique land records (66 distinct records spanning 20+ states)
+// Consolidated globally unique land records (distinct records spanning 20+ states)
 export const INITIAL_LAND_RECORDS: ExtractedLandRecord[] = [
   ...UNIQUE_RECORDS_NORTH,
   ...UNIQUE_RECORDS_WEST,
   ...UNIQUE_RECORDS_SOUTH,
   ...UNIQUE_RECORDS_CENTRAL,
-  ...UNIQUE_RECORDS_EAST
+  ...UNIQUE_RECORDS_EAST,
+  ...NEW_VILLAGE_LAND_RECORDS
 ];
 
 export const STATE_DIGITIZATION_DATA: StateDigitizationProgress[] = [

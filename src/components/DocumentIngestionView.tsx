@@ -14,15 +14,19 @@ import {
   ShieldCheck,
   Layers,
   HelpCircle,
-  Cpu
+  Cpu,
+  QrCode,
+  Camera,
+  Scan
 } from 'lucide-react';
 import { DocumentType, IndicLanguage, ExtractedLandRecord } from '../types';
 import { runAutomatedValidationRules } from '../services/landRecordService';
+import { QrCodeScannerModule } from './QrCodeScannerModule';
 
 interface DocumentIngestionViewProps {
   onRecordIngested: (record: ExtractedLandRecord) => void;
   allRecords: ExtractedLandRecord[];
-  onNavigateToVerification: () => void;
+  onNavigateToVerification: (record?: ExtractedLandRecord) => void;
 }
 
 export const DocumentIngestionView: React.FC<DocumentIngestionViewProps> = ({
@@ -34,6 +38,9 @@ export const DocumentIngestionView: React.FC<DocumentIngestionViewProps> = ({
   const [languageHint, setLanguageHint] = useState<IndicLanguage | 'auto'>('auto');
   const [uploadedImagePreview, setUploadedImagePreview] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string>('');
+  
+  // Ingestion Mode: Document Upload & AI OCR vs. Physical Document QR Camera Scanner
+  const [ingestionMode, setIngestionMode] = useState<'DOCUMENT_UPLOAD' | 'QR_SCANNER'>('DOCUMENT_UPLOAD');
   
   // Computer Vision Preprocessing Controls
   const [deskewAngle, setDeskewAngle] = useState<number>(-1.2);
@@ -328,9 +335,58 @@ export const DocumentIngestionView: React.FC<DocumentIngestionViewProps> = ({
             </span>
           </div>
         </div>
+
+        {/* Ingestion Mode Switcher Navigation Ribbon */}
+        <div className="flex flex-wrap items-center justify-between gap-3 mt-4 pt-4 border-t border-[#DCD7CE]">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              id="tab-mode-upload"
+              type="button"
+              onClick={() => setIngestionMode('DOCUMENT_UPLOAD')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                ingestionMode === 'DOCUMENT_UPLOAD'
+                  ? 'bg-natural-olive text-[#FFF9EA] shadow-xs'
+                  : 'bg-[#F5F3EE] hover:bg-[#EBE7DF] text-[#5A5A40] border border-[#DCD7CE]'
+              }`}
+            >
+              <Upload className="w-4 h-4" />
+              <span>Document Upload &amp; Optical Preprocessing</span>
+            </button>
+
+            <button
+              id="tab-mode-qr-scanner"
+              type="button"
+              onClick={() => setIngestionMode('QR_SCANNER')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                ingestionMode === 'QR_SCANNER'
+                  ? 'bg-natural-olive text-[#FFF9EA] shadow-xs'
+                  : 'bg-[#F5F3EE] hover:bg-[#EBE7DF] text-[#5A5A40] border border-[#DCD7CE]'
+              }`}
+            >
+              <Camera className="w-4 h-4" />
+              <span>Physical Document QR Scanner</span>
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-[#FFF9EA] text-[#8B4513] font-bold border border-[#DCD7CE]">
+                Live Camera
+              </span>
+            </button>
+          </div>
+
+          <div className="text-[11px] text-[#6B6B58] flex items-center gap-1.5 hidden sm:flex">
+            <Scan className="w-3.5 h-3.5 text-[#8B4513]" />
+            <span>Fast lookup via DILRMP 2D Barcodes &amp; Physical Seals</span>
+          </div>
+        </div>
       </div>
 
-      {/* Main Grid: Upload & Presets (Left) + CV Preprocessing & Preview (Right) */}
+      {/* Conditional Rendering: QR Code Camera Scanner Module vs. Upload & CV Pipeline */}
+      {ingestionMode === 'QR_SCANNER' ? (
+        <QrCodeScannerModule
+          allRecords={allRecords}
+          onRecordIngested={onRecordIngested}
+          onNavigateToVerification={onNavigateToVerification}
+        />
+      ) : (
+      /* Main Grid: Upload & Presets (Left) + CV Preprocessing & Preview (Right) */
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left 5 Cols: File Upload & Quick Presets */}
         <div className="lg:col-span-5 space-y-4">
@@ -340,6 +396,23 @@ export const DocumentIngestionView: React.FC<DocumentIngestionViewProps> = ({
               <span>Source Document</span>
               <span className="text-[11px] font-normal text-[#6B6B58]">PDF, TIFF, JPEG, PNG</span>
             </h3>
+
+            {/* Quick Switch to QR Scanner Banner */}
+            <div 
+              onClick={() => setIngestionMode('QR_SCANNER')}
+              className="p-2.5 rounded-lg bg-[#FFF9EA] hover:bg-[#F5EBD7] border border-[#DCD7CE] flex items-center justify-between gap-2 cursor-pointer transition-colors group"
+            >
+              <div className="flex items-center gap-2">
+                <QrCode className="w-4 h-4 text-[#8B4513] shrink-0" />
+                <span className="text-xs font-semibold text-[#4A3728]">
+                  Have a physical paper printout with a QR code?
+                </span>
+              </div>
+              <span className="text-[11px] font-bold text-[#8B4513] group-hover:underline flex items-center gap-0.5 shrink-0">
+                <span>Scan with Camera</span>
+                <span>&rarr;</span>
+              </span>
+            </div>
 
             {/* Drag and Drop Zone */}
             <div
@@ -661,6 +734,7 @@ export const DocumentIngestionView: React.FC<DocumentIngestionViewProps> = ({
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 };

@@ -481,6 +481,191 @@ export const DILRMP_MASTER_DATABASE: MasterLandRecord[] = [
     "status": "CLEAN",
     "lastMutationNumber": "WB-ROR-2024-0129",
     "soilClass": "Sali Class I (Irrigated Boro Rice)"
+  },
+  {
+    "state": "Maharashtra",
+    "district": "Sindhudurg",
+    "tehsil": "Malvan",
+    "village": "Devbagh",
+    "khasraNumber": "84/1",
+    "khataNumber": "210",
+    "masterAreaSqMeters": 8094,
+    "registeredOwners": [
+      "Ganesh Pandurang Parab",
+      "Sunita Ganesh Parab"
+    ],
+    "status": "CLEAN",
+    "lastMutationNumber": "MH-SIN-2024-0841",
+    "soilClass": "Coastal Laterite Sandy Loam (Alphonso Mango Orchard)"
+  },
+  {
+    "state": "Maharashtra",
+    "district": "Sindhudurg",
+    "tehsil": "Malvan",
+    "village": "Devbagh",
+    "khasraNumber": "85",
+    "khataNumber": "212",
+    "masterAreaSqMeters": 10500,
+    "registeredOwners": [
+      "Vasant Sakharam Samant"
+    ],
+    "status": "LITIGATION",
+    "lastMutationNumber": "MH-SIN-2023-0850",
+    "soilClass": "Khajan Saline Protective Embankment Paddy"
+  },
+  {
+    "state": "Himachal Pradesh",
+    "district": "Kullu",
+    "tehsil": "Naggar",
+    "village": "Naggar",
+    "khasraNumber": "112/1",
+    "khataNumber": "67",
+    "masterAreaSqMeters": 8900,
+    "registeredOwners": [
+      "Vikramaditya Thakur",
+      "Padma Dolma Thakur"
+    ],
+    "status": "CLEAN",
+    "lastMutationNumber": "HP-KUL-2024-1121",
+    "soilClass": "Bakhal Awal (Terraced Mountain Loam - Royal Delicious Apple)"
+  },
+  {
+    "state": "Himachal Pradesh",
+    "district": "Kullu",
+    "tehsil": "Naggar",
+    "village": "Naggar",
+    "khasraNumber": "113",
+    "khataNumber": "69",
+    "masterAreaSqMeters": 11500,
+    "registeredOwners": [
+      "Hari Chand Negi"
+    ],
+    "status": "LITIGATION",
+    "lastMutationNumber": "HP-KUL-2023-1130",
+    "soilClass": "Bakhal Doem (Hill Maize & Kidney Beans)"
+  },
+  {
+    "state": "Rajasthan",
+    "district": "Jaisalmer",
+    "tehsil": "Jaisalmer",
+    "village": "Ramgarh",
+    "khasraNumber": "401/1",
+    "khataNumber": "112",
+    "masterAreaSqMeters": 25293,
+    "registeredOwners": [
+      "Bhairon Singh Bhati"
+    ],
+    "status": "CLEAN",
+    "lastMutationNumber": "RJ-JAI-2024-4011",
+    "soilClass": "Nahri Dumat (IGNP Canal Command - Cumin & Mustard)"
+  },
+  {
+    "state": "Rajasthan",
+    "district": "Jaisalmer",
+    "tehsil": "Jaisalmer",
+    "village": "Ramgarh",
+    "khasraNumber": "402",
+    "khataNumber": "114",
+    "masterAreaSqMeters": 31500,
+    "registeredOwners": [
+      "Durgadas Jasraj Paliwal"
+    ],
+    "status": "LITIGATION",
+    "lastMutationNumber": "RJ-JAI-2023-4020",
+    "soilClass": "Chahi Barani (Sprinkler Irrigated Isabgol / Psyllium)"
+  },
+  {
+    "state": "Kerala",
+    "district": "Alappuzha",
+    "tehsil": "Kuttanad",
+    "village": "Nedumudi",
+    "khasraNumber": "78/1",
+    "khataNumber": "TH-340",
+    "masterAreaSqMeters": 7200,
+    "registeredOwners": [
+      "Kuriakose Thomas Palathinkal",
+      "Mary Kuriakose"
+    ],
+    "status": "CLEAN",
+    "lastMutationNumber": "KL-ALP-2024-0781",
+    "soilClass": "Kari Nilam (Below Sea Level Acid Saline Paddy Polder)"
+  },
+  {
+    "state": "Kerala",
+    "district": "Alappuzha",
+    "tehsil": "Kuttanad",
+    "village": "Nedumudi",
+    "khasraNumber": "79",
+    "khataNumber": "TH-342",
+    "masterAreaSqMeters": 9500,
+    "registeredOwners": [
+      "Devadasan Nair Kayamkulam"
+    ],
+    "status": "LITIGATION",
+    "lastMutationNumber": "KL-ALP-2023-0790",
+    "soilClass": "Kayal Padasekharam Polder Rice"
+  },
+  {
+    "state": "Assam",
+    "district": "Majuli",
+    "tehsil": "Majuli Sub-Division",
+    "village": "Garmur",
+    "khasraNumber": "156/1",
+    "khataNumber": "PT-88",
+    "masterAreaSqMeters": 13400,
+    "registeredOwners": [
+      "Bipul Chandra Saikia"
+    ],
+    "status": "CLEAN",
+    "lastMutationNumber": "AS-MAJ-2024-1561",
+    "soilClass": "Poli Mati (Recent Brahmaputra Flood Silt - Deepwater Bao Rice)"
+  },
+  {
+    "state": "Karnataka",
+    "district": "Kolar",
+    "tehsil": "Bangarapet",
+    "village": "Bangarapet",
+    "khasraNumber": "64/1",
+    "khataNumber": "KH-510",
+    "masterAreaSqMeters": 12140,
+    "registeredOwners": [
+      "K. N. Munivenkatappa",
+      "M. Manjunatha"
+    ],
+    "status": "CLEAN",
+    "lastMutationNumber": "KA-KOL-2024-0641",
+    "soilClass": "Kempu Jiddu Mannu (Red Sandy Loam - V1 Mulberry Sericulture)"
+  },
+  {
+    "state": "Andhra Pradesh",
+    "district": "West Godavari",
+    "tehsil": "Bhimavaram",
+    "village": "Bhimavaram",
+    "khasraNumber": "230/1",
+    "khataNumber": "PPB-914",
+    "masterAreaSqMeters": 14164,
+    "registeredOwners": [
+      "Venkata Satyanarayana Raju Penmatsa"
+    ],
+    "status": "CLEAN",
+    "lastMutationNumber": "AP-WG-2024-2301",
+    "soilClass": "Godavari Nalla Regadi (Heavy Black Clay - Vannamei Aquaculture Pond)"
+  },
+  {
+    "state": "Jammu & Kashmir",
+    "district": "Kulgam",
+    "tehsil": "Devsar",
+    "village": "Kulgam",
+    "khasraNumber": "91/1",
+    "khataNumber": "KH-142",
+    "masterAreaSqMeters": 7588,
+    "registeredOwners": [
+      "Ghulam Mohammad Mir",
+      "Bashir Ahmad Mir"
+    ],
+    "status": "CLEAN",
+    "lastMutationNumber": "JK-KUL-2024-0911",
+    "soilClass": "Vuddr / Karewa Loam (High Plateau Saffron / Crocus sativus)"
   }
 ];
 
